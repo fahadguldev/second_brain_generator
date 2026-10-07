@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local pipeline data & generated artifacts
+data/
+brain_data/
+*.npz
+*.checkpoint.npz
+
+# Secrets & Environment variables
+.env
+.env.local
+
+# OS & Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

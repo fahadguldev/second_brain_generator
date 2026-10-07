@@ -1,0 +1,187 @@
+# ==============================================================================
+# Second Brain Generator Configuration Template
+# ==============================================================================
+# This file defines your AI Second Brain's creator persona, tone guidelines,
+# topic taxonomy, and pipeline settings.
+# Do NOT place API keys or secrets in this file (use .env instead).
+# ==============================================================================
+
+version: "1.0"
+
+# ------------------------------------------------------------------------------
+# 1. Creator Identity & Persona
+# ------------------------------------------------------------------------------
+creator_name: "Fahad Gul"
+creator_handles:
+  - "fahadgul.dev"
+  - "fahadgul"
+  - "@fahadgul"
+bio: "Software Engineer & Cloud Architect"
+
+creator:
+  name: "Fahad Gul"
+  handles:
+    - "fahadgul.dev"
+    - "fahadgul"
+    - "@fahadgul"
+  bio: "Software Engineer & Cloud Architect"
+
+persona:
+  name: "Fahad Gul"
+  languages:
+    primary: "english"
+    secondary:
+      - "hinglish"
+      - "urdu"
+  tone: "direct, concise, authentic, technical"
+  default_domain: "professional"
+  avoid_words:
+    - "bhai"
+    - "bro"
+
+# ------------------------------------------------------------------------------
+# 2. Communication Style & Tone Guidelines
+# ------------------------------------------------------------------------------
+tone_guidelines:
+  - "Short and punchy; 1-2 sentences by default"
+  - "English base with natural Romanized Hinglish code-switching"
+  - "Answer directly first, then provide minimal necessary explanation"
+  - "Authentic personal knowledge and opinions over generic AI answers"
+  - "Factual grounding strictly overrides communication style"
+  - "Natural forms of address without forced slang"
+  - "Never invent credentials, personal history, or experiences"
+
+# ------------------------------------------------------------------------------
+# 3. Language Preferences
+# ------------------------------------------------------------------------------
+languages:
+  - "english"
+  - "hinglish"
+  - "urdu"
+
+# ------------------------------------------------------------------------------
+# 4. Topic Taxonomy & Keyword Lexicon
+# ------------------------------------------------------------------------------
+# Used by the Knowledge Compiler to categorize notes, transcripts, and Q&A.
+topics:
+  python:
+    - "python"
+    - "fastapi"
+    - "pydantic"
+    - "pytest"
+    - "asyncio"
+  cloud:
+    - "cloud"
+    - "aws"
+    - "serverless"
+    - "ec2"
+    - "s3"
+    - "lambda"
+    - "amazon web"
+  cybersecurity:
+    - "cyber"
+    - "security"
+    - "hacking"
+    - "ethical"
+    - "infosec"
+  ai:
+    - "artificial intelligence"
+    - "machine learning"
+    - "llm"
+    - "rag"
+    - "embeddings"
+    - "neural"
+  datascience:
+    - "data science"
+    - "datascience"
+    - "analytics"
+    - "pandas"
+    - "numpy"
+  webdev:
+    - "web dev"
+    - "webdev"
+    - "frontend"
+    - "backend"
+    - "html"
+    - "css"
+    - "react"
+    - "nextjs"
+    - "javascript"
+    - "typescript"
+  devops:
+    - "devops"
+    - "docker"
+    - "kubernetes"
+    - "ci/cd"
+    - "container"
+  database:
+    - "database"
+    - "sql"
+    - "mysql"
+    - "mongodb"
+    - "postgres"
+    - "qdrant"
+    - "vector db"
+  career:
+    - "career"
+    - "salary"
+    - "job"
+    - "jobs"
+    - "scope"
+    - "market"
+    - "hiring"
+    - "interview"
+  education:
+    - "degree"
+    - "university"
+    - "semester"
+    - "cgpa"
+    - "gpa"
+    - "admission"
+    - "college"
+  software-engineering:
+    - "software engineering"
+    - "software dev"
+    - "system design"
+    - "architecture"
+
+# ------------------------------------------------------------------------------
+# 5. Standardized Directory Paths
+# ------------------------------------------------------------------------------
+paths:
+  data_dir: "data"
+  brain_data_dir: "brain_data"
+  vids_dir: "data/vids"
+  audios_dir: "data/audios"
+  text_dir: "data/text"
+  md_dir: "data/md"
+  comments_dir: "data/comments"
+  transcripts_dir: "brain_data/text"
+  records_path: "brain_data/records.jsonl"
+  rag_records_path: "brain_data/rag_records.jsonl"
+  embeddings_path: "brain_data/gemini_embeddings.npz"
+
+# ------------------------------------------------------------------------------
+# 6. Pipeline Subsystem Settings (M2 - M5)
+# ------------------------------------------------------------------------------
+whisper:
+  model_size: "small"        # tiny | base | small | medium | large-v3
+  device: "cpu"              # cpu | cuda | auto
+  compute_type: "int8"       # int8 | float16 | float32 | default
+  vad_filter: true
+  language: null             # null for auto-detection
+
+embedding:
+  model: "models/gemini-embedding-2"
+  dimension: 3072
+  batch_size: 25
+  rate_limit_per_min: 60
+  rate_limit_per_day: 1000
+
+qdrant:
+  url: "http://localhost:6333"
+  api_key: null
+  collection_name: "second_brain"
+  vector_size: 3072
+  distance: "Cosine"
+  batch_size: 100
