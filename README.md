@@ -45,11 +45,29 @@ second_brain_generator/
 
 ### 1. Set Up Virtual Environment & Dependencies
 
-Create and activate a standalone Python virtual environment, then install requirements:
+You can set up your environment using either **`uv`** (fastest) or standard **`python3` / `pip`**:
 
+#### Option A: Using `uv` (Recommended)
 ```bash
-python3 -m venv .venv
+# Create virtual environment with uv
+uv venv .venv
+
+# Activate environment
 source .venv/bin/activate
+
+# Install dependencies with uv pip
+uv pip install -r requirements.txt
+```
+
+#### Option B: Using standard `python` & `pip`
+```bash
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate environment
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -77,7 +95,7 @@ QDRANT_API_KEY=
 QDRANT_COLLECTION=second_brain
 ```
 
-### 3. Add Your Content
+### 4. Add Your Content
 
 Drop your media files in `data/vids/` and `data/audios/`, notes in `data/text/` and `data/md/`, and comments in `data/comments/`.
 
