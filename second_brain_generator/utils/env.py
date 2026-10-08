@@ -66,7 +66,7 @@ def mask_secret(secret: Optional[str]) -> str:
     Safely masks an API key or token for logs and status outputs.
 
     Examples:
-        >>> mask_secret("AQ.Ab8RN6LjmI2iajxSwxWCMspBb5gNbcocQvHNpKx3TFs8o0VY0g")
+        >>> mask_secret("")
         'AQ.A...0VY0g'
         >>> mask_secret("short")
         '***'
