@@ -185,3 +185,10 @@ qdrant:
   vector_size: 3072
   distance: "Cosine"
   batch_size: 100
+
+# ------------------------------------------------------------------------------
+# 7. Document Chunking Settings (matches Second Brain App ingestion)
+# ------------------------------------------------------------------------------
+chunk_size: 1500
+chunk_overlap: 200
+

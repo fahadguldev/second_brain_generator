@@ -136,6 +136,8 @@ class BrainConfig(BaseModel):
     bio: Optional[str] = None
 
     # Subsystem and nested models
+    chunk_size: int = 1500
+    chunk_overlap: int = 200
     creator: CreatorConfig = Field(default_factory=CreatorConfig)
     persona: PersonaConfig = Field(default_factory=PersonaConfig)
     whisper: WhisperConfig = Field(default_factory=WhisperConfig)

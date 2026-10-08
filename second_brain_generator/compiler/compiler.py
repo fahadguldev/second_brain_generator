@@ -12,6 +12,7 @@ from ..config import BrainConfig
 from ..schemas import KnowledgeRecord, RagRecord, serialize_jsonl
 from ..utils.uuids import UUID_NAMESPACE_SECOND_BRAIN, generate_record_uuid, normalize_text
 from .classifier import detect_language, infer_booleans, is_deflection, is_style_only, make_topics
+from .chunker import chunk_text
 from .readers import read_comments_csv, read_comments_json, read_markdown_notes, read_text_notes, read_transcripts
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,9 @@ class KnowledgeCompiler:
         self.default_domain = "professional"
         if hasattr(config, "persona") and getattr(config.persona, "default_domain", None):
             self.default_domain = config.persona.default_domain
+
+        self.chunk_size = getattr(config, "chunk_size", 1500)
+        self.chunk_overlap = getattr(config, "chunk_overlap", 200)
 
     def process_all(self) -> Tuple[List[KnowledgeRecord], List[RagRecord]]:
         """
@@ -86,69 +90,84 @@ class KnowledgeCompiler:
                 continue
             seen_keys.add(dedup_key)
 
-            # Classifications
-            lang = detect_language(text)
-            q_lang = detect_language(q) if q else None
-            topics = make_topics(f"{text} {q or ''}", self.topics_lexicon, filename=item.get("file_name", ""))
-            exp, opi = infer_booleans(text)
-            style_only = is_style_only(text, q)
+            # Chunk the content using brain app's chunking algorithm
+            chunks = chunk_text(text, size=self.chunk_size, overlap=self.chunk_overlap)
+            if not chunks:
+                continue
 
-            # Deterministic UUID
-            rec_id = generate_record_uuid(
-                source_type=item["source_type"],
-                identifier=item.get("file_name") or item.get("file_path", "default"),
-                text=text,
-                question=q,
-                namespace=UUID_NAMESPACE_SECOND_BRAIN,
-            )
+            total_chunks = len(chunks)
+            base_ident = item.get("file_name") or item.get("file_path", "default")
 
-            # KnowledgeRecord payload
-            source_payload = {
-                "type": item["source_type"],
-                "file": item.get("file_path", ""),
-                "file_name": item.get("file_name"),
-                "date": item.get("date"),
-                "extra": item.get("extra", {}),
-            }
+            for position, chunk in enumerate(chunks):
+                # Classifications
+                lang = detect_language(chunk)
+                q_lang = detect_language(q) if q else None
+                topics = make_topics(f"{chunk} {q or ''}", self.topics_lexicon, filename=item.get("file_name", ""))
+                exp, opi = infer_booleans(chunk)
+                style_only = is_style_only(chunk, q)
 
-            content_payload = {
-                "text": text,
-                "language": lang,
-                "question": q,
-                "question_language": q_lang,
-            }
+                # Deterministic UUID
+                chunk_ident = f"{base_ident}#chunk-{position}" if total_chunks > 1 else base_ident
+                rec_id = generate_record_uuid(
+                    source_type=item["source_type"],
+                    identifier=chunk_ident,
+                    text=chunk,
+                    question=q,
+                    namespace=UUID_NAMESPACE_SECOND_BRAIN,
+                )
 
-            class_payload = {
-                "domain": self.default_domain,
-                "topics": topics,
-                "knowledge": not style_only,
-                "experience": exp,
-                "opinion": opi,
-                "style": True,
-                "ai_assisted": False,
-            }
+                extra = dict(item.get("extra", {}))
+                if total_chunks > 1:
+                    extra["chunk_index"] = position
+                    extra["chunks_total"] = total_chunks
 
-            k_rec = KnowledgeRecord(
-                id=rec_id,
-                source=source_payload,
-                content=content_payload,
-                classification=class_payload,
-            )
-            knowledge_records.append(k_rec)
+                # KnowledgeRecord payload
+                source_payload = {
+                    "type": item["source_type"],
+                    "file": item.get("file_path", ""),
+                    "file_name": item.get("file_name"),
+                    "date": item.get("date"),
+                    "extra": extra,
+                }
 
-            # RagRecord payload
-            search_text = f"{q}\n{text}" if q else text
-            rag_rec = RagRecord(
-                id=rec_id,
-                text=search_text,
-                metadata={
-                    "source": source_payload,
-                    "classification": class_payload,
+                content_payload = {
+                    "text": chunk,
                     "language": lang,
                     "question": q,
-                },
-            )
-            rag_records.append(rag_rec)
+                    "question_language": q_lang,
+                }
+
+                class_payload = {
+                    "domain": self.default_domain,
+                    "topics": topics,
+                    "knowledge": not style_only,
+                    "experience": exp,
+                    "opinion": opi,
+                    "style": True,
+                    "ai_assisted": False,
+                }
+
+                k_rec = KnowledgeRecord(
+                    id=rec_id,
+                    source=source_payload,
+                    content=content_payload,
+                    classification=class_payload,
+                )
+                knowledge_records.append(k_rec)
+
+                # RagRecord payload
+                search_text = f"{q}\n{chunk}" if q else chunk
+                rag_rec = RagRecord(
+                    id=rec_id,
+                    text=search_text,
+                    metadata={
+                        "source": source_payload,
+                        "classification": class_payload,
+                        "language": lang,
+                        "question": q,
+                    },
+                )
+                rag_records.append(rag_rec)
 
         logger.info(
             "Compiled %d knowledge records and %d RAG records",
