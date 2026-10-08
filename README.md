@@ -43,14 +43,15 @@ second_brain_generator/
 
 ## Quickstart
 
-### 1. Activate the Virtual Environment
+### 1. Set Up Virtual Environment & Dependencies
 
-Before running any script, activate your project's virtual environment (where `faster-whisper`, `google-genai`, `qdrant-client`, and `pydantic` are installed):
+Create and activate a standalone Python virtual environment, then install requirements:
 
 ```bash
-source transcription/.venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-*(Or use `./transcription/.venv/bin/python` directly)*
 
 ### 2. Initialize Directories
 
