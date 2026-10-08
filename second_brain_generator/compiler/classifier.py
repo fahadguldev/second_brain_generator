@@ -100,7 +100,7 @@ def make_topics(text: str, lexicon: Dict[str, List[str]], filename: str = "") ->
     if not text:
         return topics
 
-    combined = f"{text} {filename}".lower()
+    combined = f"{text} {filename}".replace("_", " ").replace("-", " ").lower()
     for topic, patterns in lexicon.items():
         for pat in patterns:
             # Word boundary search if simple word
