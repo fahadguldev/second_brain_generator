@@ -1481,9 +1481,16 @@ def test_f31_cli_process_flag_executes_compiler_only():
 
 
 def test_f31_cli_all_flag_executes_full_pipeline():
-    """F31: --all flag triggers sequential execution: init, transcribe, process, embed, test, upload."""
-    all_stages = ["init", "transcribe", "process", "embed", "test", "upload"]
-    assert len(all_stages) == 6
+    """F31: Generation pipeline executes 5 stages: init, transcribe, process, embed, test without upload."""
+    generation_stages = ["init", "transcribe", "process", "embed", "test"]
+    assert len(generation_stages) == 5
+    assert "upload" not in generation_stages
+
+
+def test_f31_cli_upload_is_separate_stage():
+    """F31: Qdrant indexing is isolated to a separate command/stage."""
+    qdrant_stages = ["upload"]
+    assert "upload" in qdrant_stages
 
 
 def test_f31_cli_dry_run_flag_performs_no_side_effects(mock_brain_dirs):
@@ -1493,6 +1500,56 @@ def test_f31_cli_dry_run_flag_performs_no_side_effects(mock_brain_dirs):
     if not dry_run:
         written_files.append("test.txt")
     assert len(written_files) == 0
+
+
+def test_f31_cli_runner_does_not_call_upload_on_all(monkeypatch):
+    """F31: Verifies that running run_generator with --all does NOT call step_upload."""
+    import sys
+    import run_generator
+    called_steps = []
+    monkeypatch.setattr(run_generator, "step_init", lambda *a, **kw: called_steps.append("init"))
+    monkeypatch.setattr(run_generator, "step_transcribe", lambda *a, **kw: called_steps.append("transcribe"))
+    monkeypatch.setattr(run_generator, "step_process", lambda *a, **kw: called_steps.append("process"))
+    monkeypatch.setattr(run_generator, "step_embed", lambda *a, **kw: called_steps.append("embed"))
+    monkeypatch.setattr(run_generator, "step_test", lambda *a, **kw: called_steps.append("test"))
+    monkeypatch.setattr(run_generator, "step_upload", lambda *a, **kw: called_steps.append("upload"))
+    monkeypatch.setattr(sys, "argv", ["run_generator.py", "--all"])
+    run_generator.main()
+    assert called_steps == ["init", "transcribe", "process", "embed", "test"]
+    assert "upload" not in called_steps
+
+
+def test_f31_cli_runner_calls_upload_when_requested(monkeypatch):
+    """F31: Verifies that running run_generator with --upload calls step_upload only."""
+    import sys
+    import run_generator
+    called_steps = []
+    monkeypatch.setattr(run_generator, "step_init", lambda *a, **kw: called_steps.append("init"))
+    monkeypatch.setattr(run_generator, "step_transcribe", lambda *a, **kw: called_steps.append("transcribe"))
+    monkeypatch.setattr(run_generator, "step_process", lambda *a, **kw: called_steps.append("process"))
+    monkeypatch.setattr(run_generator, "step_embed", lambda *a, **kw: called_steps.append("embed"))
+    monkeypatch.setattr(run_generator, "step_test", lambda *a, **kw: called_steps.append("test"))
+    monkeypatch.setattr(run_generator, "step_upload", lambda *a, **kw: called_steps.append("upload"))
+    monkeypatch.setattr(sys, "argv", ["run_generator.py", "--upload"])
+    run_generator.main()
+    assert called_steps == ["upload"]
+
+
+def test_f31_cli_runner_default_runs_generation_without_upload(monkeypatch):
+    """F31: Verifies that running run_generator with no args runs generation stages without upload."""
+    import sys
+    import run_generator
+    called_steps = []
+    monkeypatch.setattr(run_generator, "step_init", lambda *a, **kw: called_steps.append("init"))
+    monkeypatch.setattr(run_generator, "step_transcribe", lambda *a, **kw: called_steps.append("transcribe"))
+    monkeypatch.setattr(run_generator, "step_process", lambda *a, **kw: called_steps.append("process"))
+    monkeypatch.setattr(run_generator, "step_embed", lambda *a, **kw: called_steps.append("embed"))
+    monkeypatch.setattr(run_generator, "step_test", lambda *a, **kw: called_steps.append("test"))
+    monkeypatch.setattr(run_generator, "step_upload", lambda *a, **kw: called_steps.append("upload"))
+    monkeypatch.setattr(sys, "argv", ["run_generator.py"])
+    run_generator.main()
+    assert called_steps == ["init", "transcribe", "process", "embed", "test"]
+    assert "upload" not in called_steps
 
 
 # ============================================================================
