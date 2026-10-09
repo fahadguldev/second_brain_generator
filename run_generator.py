@@ -2,14 +2,17 @@
 """
 Second Brain Generator - Unified CLI Runner.
 
-Supports executing the complete pipeline end-to-end or running individual stages:
-    python run_generator.py --all
-    python run_generator.py --transcribe
-    python run_generator.py --process
-    python run_generator.py --embed
-    python run_generator.py --test
-    python run_generator.py --upload
-    python run_generator.py --init
+Supports executing the complete generation pipeline or individual stages:
+    python run_generator.py              # Run complete generation (Stages 1-5, no Qdrant upload)
+    python run_generator.py --all        # Run complete generation (Stages 1-5, no Qdrant upload)
+    python run_generator.py --upload     # Separate command to push vectors to Qdrant
+    python run_generator.py --qdrant     # Alias for --upload
+    python uploader.py                   # Standalone command to push vectors to Qdrant
+    python run_generator.py --transcribe # Run transcription stage only
+    python run_generator.py --process    # Run compilation/processing stage only
+    python run_generator.py --embed      # Run embedding generation stage only
+    python run_generator.py --test       # Run retrieval evaluation stage only
+    python run_generator.py --init       # Initialize directory structure only
 """
 
 from __future__ import annotations
@@ -203,23 +206,19 @@ def main() -> None:
     )
 
     action_group = parser.add_argument_group("Pipeline Execution Flags")
-    action_group.add_argument("--all", action="store_true", help="Execute complete pipeline (init -> transcribe -> process -> embed -> test -> upload)")
+    action_group.add_argument("--all", action="store_true", help="Execute complete generation pipeline (init -> transcribe -> process -> embed -> test). Does NOT push vectors to Qdrant.")
     action_group.add_argument("--init", action="store_true", help="Initialize and scaffold data directory structure")
     action_group.add_argument("--transcribe", action="store_true", help="Transcribe audio and video media files with Whisper")
     action_group.add_argument("--process", action="store_true", help="Compile notes, transcripts, comments and classify topics/languages")
     action_group.add_argument("--embed", action="store_true", help="Generate vector embeddings using Gemini API")
     action_group.add_argument("--test", action="store_true", help="Run offline retrieval evaluations and benchmark tests")
-    action_group.add_argument("--upload", action="store_true", help="Index and batch-upsert points into Qdrant vector database")
+    action_group.add_argument("--upload", "--qdrant", dest="upload", action="store_true", help="Separate command to index and batch-upsert points into Qdrant vector database")
 
     opt_group = parser.add_argument_group("Options")
     opt_group.add_argument("--config", type=str, default="brain_config.yaml", help="Path to brain_config.yaml")
     opt_group.add_argument("--data-dir", type=str, help="Override root data directory path")
     opt_group.add_argument("--force", action="store_true", help="Force re-transcription / re-processing of existing files")
     opt_group.add_argument("--dry-run", action="store_true", help="Simulate pipeline actions without disk/network side effects")
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(0)
 
     args = parser.parse_args()
 
@@ -228,6 +227,8 @@ def main() -> None:
 
     # Verify config path
     config_path = Path(args.config).resolve()
+    if not config_path.exists() and (SCRIPT_DIR / args.config).exists():
+        config_path = (SCRIPT_DIR / args.config).resolve()
     if not config_path.exists():
         print(f"❌ Error: Configuration file '{args.config}' not found.")
         sys.exit(1)
@@ -249,14 +250,27 @@ def main() -> None:
     if dry_run:
         print("⚡ MODE: DRY-RUN (Simulating execution)")
 
-    # Execute requested steps
-    if args.all:
+    # Determine if full generation pipeline should run
+    stage_flags_passed = [args.init, args.transcribe, args.process, args.embed, args.test, args.upload]
+    run_whole_pipeline = args.all or not any(stage_flags_passed)
+
+    if run_whole_pipeline:
         step_init(config, dry_run=dry_run)
         step_transcribe(config, force=args.force, dry_run=dry_run)
         step_process(config, dry_run=dry_run)
         step_embed(config, dry_run=dry_run)
         step_test(config, dry_run=dry_run)
-        step_upload(config, dry_run=dry_run)
+
+        if not args.upload:
+            print("\n" + "=" * 65)
+            print(" GENERATION PIPELINE COMPLETE (Stages 1-5)")
+            print("=" * 65)
+            print("✓ Vectors generated and saved to disk.")
+            print("ℹ️  Vectors were NOT pushed to Qdrant.")
+            print("   To push vectors to Qdrant, run the separate command:")
+            print("       python run_generator.py --upload")
+            print("       (or python uploader.py)")
+            print("=" * 65)
     else:
         if args.init:
             step_init(config, dry_run=dry_run)
@@ -268,8 +282,10 @@ def main() -> None:
             step_embed(config, dry_run=dry_run)
         if args.test:
             step_test(config, dry_run=dry_run)
-        if args.upload:
-            step_upload(config, dry_run=dry_run)
+
+    # Separate step for Qdrant indexing
+    if args.upload:
+        step_upload(config, dry_run=dry_run)
 
     duration = time.time() - start_time
     print(f"\n✨ Pipeline execution finished in {duration:.2f}s.\n")
