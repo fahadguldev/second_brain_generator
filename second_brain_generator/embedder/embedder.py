@@ -55,12 +55,21 @@ class GeminiEmbedder:
             # Remove models/ prefix if required by SDK
             model_name = self.model.replace("models/", "")
             
+            contents = [
+                types.Content(role="user", parts=[types.Part(text=text)])
+                for text in texts
+            ]
             result = client.models.embed_content(
                 model=model_name,
-                contents=texts,
+                contents=contents,
                 config=types.EmbedContentConfig(output_dimensionality=self.dimension),
             )
-            return [e.values for e in result.embeddings]
+            embeddings = [e.values for e in result.embeddings]
+            if len(embeddings) != len(texts):
+                raise RuntimeError(
+                    f"Expected {len(texts)} embeddings, received {len(embeddings)}"
+                )
+            return embeddings
         except Exception as e:
             err_msg = str(e).upper()
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "QUOTA" in err_msg:
