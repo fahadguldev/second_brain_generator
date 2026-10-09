@@ -103,27 +103,42 @@ Drop your media files in `data/vids/` and `data/audios/`, notes in `data/text/` 
 
 ## Pipeline Execution
 
-### Run Everything at Once
+### 1. Run Complete Generation Process (Local Only)
 
-To run the complete pipeline end-to-end:
+To run the complete generation pipeline end-to-end (without pushing vectors to Qdrant):
 
 ```bash
+python run_generator.py
+# or
 python run_generator.py --all
 ```
 
-This sequentially executes:
+This sequentially executes stages 1 through 5:
 1. Directory scaffolding (`--init`)
 2. Media transcription (`--transcribe`)
 3. Knowledge compilation (`--process`)
 4. Vector embedding generation (`--embed`)
 5. Offline retrieval evaluation (`--test`)
-6. Qdrant vector indexing (`--upload`)
+
+> **Note**: This process saves all vectors locally to `brain_data/gemini_embeddings.npz` and **does NOT push vectors to Qdrant**.
+
+---
+
+### 2. Push Vectors to Qdrant (Separate Command)
+
+To upload your generated embeddings to your Qdrant vector database, run the dedicated separate command:
+
+```bash
+python run_generator.py --upload
+# or
+python uploader.py
+```
 
 ---
 
 ### Run Step-by-Step
 
-You can execute any individual stage on demand:
+You can also execute any individual stage on demand:
 
 | Step | Command | Description |
 |---|---|---|
@@ -132,7 +147,7 @@ You can execute any individual stage on demand:
 | **Process** | `python run_generator.py --process` | Compiles notes and comments into JSONL records |
 | **Embed** | `python run_generator.py --embed` | Generates 3072-dim embeddings via Gemini API |
 | **Test** | `python run_generator.py --test` | Evaluates retrieval with cosine similarity |
-| **Upload** | `python run_generator.py --upload` | Batch upserts vectors and payloads into Qdrant |
+| **Upload (Qdrant)** | `python run_generator.py --upload` | Separate command: Batch upserts vectors into Qdrant |
 
 ---
 
