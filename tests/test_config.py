@@ -414,7 +414,7 @@ def test_get_gemini_keys_require_flag(monkeypatch):
 
 def test_mask_secret_formatting():
     """Verifies credential masking formats."""
-    long_key = "your_api_key_here"
+    long_key = "AQ.Ab8RN6LjmI2iajxSwxWCMspBb5gNbcocQvHNpKx3TFs8o0VY0g"
     assert mask_secret(long_key) == "AQ.A...0VY0g"
     assert mask_secret("short") == "***"
     assert mask_secret(None) == "<none>"
