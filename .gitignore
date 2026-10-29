@@ -22,7 +22,9 @@ brain_data/
 
 # Secrets & Environment variables
 .env
+.env.*
 .env.local
+.env.bak
 
 # OS & Editor
 .DS_Store

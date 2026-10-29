@@ -117,6 +117,12 @@ def load_environment(
             load_dotenv(dotenv_path=found, override=override)
             logger.debug("Discovered and loaded .env from %s", found)
             return True
+        # Fallback to project root next to run_generator.py
+        project_env = Path(__file__).resolve().parents[2] / ".env"
+        if project_env.is_file():
+            load_dotenv(dotenv_path=project_env, override=override)
+            logger.debug("Discovered and loaded project fallback .env from %s", project_env)
+            return True
     except Exception as err:
         logger.debug("Failed while discovering .env: %s", err)
 
