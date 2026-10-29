@@ -45,30 +45,86 @@ second_brain_generator/
 
 ### 1. Set Up Virtual Environment & Dependencies
 
-You can set up your environment using either **`uv`** (fastest) or standard **`python3` / `pip`**:
-
-#### Option A: Using `uv` (Recommended)
+Navigate into the `second_brain_generator` directory:
 ```bash
-# Create virtual environment with uv
-uv venv .venv
-
-# Activate environment
-source .venv/bin/activate
-
-# Install dependencies with uv pip
-uv pip install -r requirements.txt
+cd second_brain_generator
 ```
 
-#### Option B: Using standard `python` & `pip`
+You can set up and activate your virtual environment using standard **`python` / `venv`** or **`uv`**:
+
+#### Linux / macOS
+
+**Using standard `python3` & `venv`**:
 ```bash
-# Create virtual environment
+# 1. Create virtual environment
 python3 -m venv .venv
 
-# Activate environment
+# 2. Activate environment
+source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+```
+
+**Using `uv` (Faster alternative)**:
+```bash
+# Create and activate
+uv venv .venv
 source .venv/bin/activate
 
 # Install dependencies
+uv pip install -r requirements.txt
+```
+
+#### Windows
+
+**Using standard `python` & `venv`**:
+```powershell
+# 1. Create virtual environment
+python -m venv .venv
+
+# 2. Activate environment
+# In PowerShell:
+.\.venv\Scripts\Activate.ps1
+
+# In Command Prompt (cmd.exe):
+.\.venv\Scripts\activate.bat
+
+# In Git Bash:
+source .venv/Scripts/activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
+```
+
+> **PowerShell ExecutionPolicy Note**: If you encounter an error in PowerShell (*"running scripts is disabled on this system"*), allow script execution for your session before activating:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+> .\.venv\Scripts\Activate.ps1
+> ```
+
+**Using `uv` (Faster alternative)**:
+```powershell
+uv venv .venv
+.\.venv\Scripts\Activate.ps1
+uv pip install -r requirements.txt
+```
+
+#### Run Directly Without Activating
+You can also execute project scripts directly using the virtual environment's Python binary:
+- **Linux / macOS**:
+  ```bash
+  .venv/bin/python run_generator.py --help
+  ```
+- **Windows**:
+  ```powershell
+  .\.venv\Scripts\python.exe run_generator.py --help
+  ```
+
+#### Deactivate
+When you are done working, deactivate the environment from any shell:
+```bash
+deactivate
 ```
 
 ### 2. Initialize Directories
