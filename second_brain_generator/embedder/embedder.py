@@ -17,6 +17,24 @@ from .key_manager import KeyManager, estimate_tokens
 logger = logging.getLogger(__name__)
 
 
+def _safe_replace(src: Path, dst: Path, retries: int = 5, delay: float = 0.5) -> None:
+    """Windows-safe atomic file replacement with retry and copy fallback on transient file lock."""
+    for attempt in range(retries):
+        try:
+            src.replace(dst)
+            return
+        except (PermissionError, OSError):
+            if attempt == retries - 1:
+                try:
+                    import shutil
+                    shutil.copy2(src, dst)
+                    src.unlink(missing_ok=True)
+                    return
+                except Exception:
+                    raise
+            time.sleep(delay)
+
+
 def _deterministic_mock_vector(text: str, dim: int = 3072) -> np.ndarray:
     """Deterministic offline fallback vector generator."""
     h = hashlib.sha256(text.encode("utf-8")).digest()
@@ -224,7 +242,7 @@ class GeminiEmbedder:
                         ids=np.array(ckpt_ids, dtype=object),
                         embeddings=ckpt_vecs,
                     )
-                    ckpt_temp.replace(ckpt_file)
+                    _safe_replace(ckpt_temp, ckpt_file)
 
         # 3. Execution strategy: sequential vs concurrent
         if self.max_workers <= 1 or len(batches) == 1 or not self.key_manager.api_keys:
@@ -260,7 +278,7 @@ class GeminiEmbedder:
             ids=np.array(ids, dtype=object),
             embeddings=embeddings.astype(np.float32),
         )
-        temp_p.replace(out_p)
+        _safe_replace(temp_p, out_p)
 
         # Cleanup checkpoint file if it exists
         if checkpoint_path:
