@@ -218,6 +218,8 @@ embedding:
   batch_size: 25
   rate_limit_per_min: 60
   rate_limit_per_day: 1000
+  rate_limit_tpm: 28000
+  max_workers: 4
 
 qdrant:
   url: "http://localhost:6333"

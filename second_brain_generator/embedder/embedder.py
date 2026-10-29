@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import hashlib
 import logging
 import os
 from pathlib import Path
+import threading
 import time
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
-from .key_manager import KeyManager
+from .key_manager import KeyManager, estimate_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,8 @@ def _deterministic_mock_vector(text: str, dim: int = 3072) -> np.ndarray:
 class GeminiEmbedder:
     """
     Generates 3072-dimensional vector embeddings using Gemini API (models/gemini-embedding-2),
-    supporting multi-key rotation, sliding-window rate limiting, and batch checkpointing.
+    supporting multi-key parallel rotation, sliding-window rate limiting (RPM/RPD/TPM),
+    and concurrent batch checkpointing.
     """
 
     def __init__(
@@ -38,12 +41,34 @@ class GeminiEmbedder:
         model: str = "models/gemini-embedding-2",
         batch_size: int = 25,
         dimension: int = 3072,
+        rpm_limit: int = 60,
+        rpd_limit: int = 1000,
+        tpm_limit: int = 28000,
+        max_workers: Optional[int] = None,
+        cooldown_seconds: float = 60.0,
     ) -> None:
         self.api_keys = [k for k in api_keys if k and k.strip()]
         self.model = model
         self.batch_size = max(1, batch_size)
         self.dimension = dimension
-        self.key_manager = KeyManager(self.api_keys)
+        self.rpm_limit = rpm_limit
+        self.rpd_limit = rpd_limit
+        self.tpm_limit = tpm_limit
+        self.cooldown_seconds = cooldown_seconds
+
+        num_keys = len(self.api_keys)
+        if max_workers is not None:
+            self.max_workers = max(1, max_workers)
+        else:
+            self.max_workers = max(1, min(num_keys, 8)) if num_keys > 0 else 1
+
+        self.key_manager = KeyManager(
+            self.api_keys,
+            rpm_limit=self.rpm_limit,
+            rpd_limit=self.rpd_limit,
+            tpm_limit=self.tpm_limit,
+            cooldown_seconds=self.cooldown_seconds,
+        )
 
     def _embed_batch_remote(self, texts: List[str], key: str) -> List[List[float]]:
         """Invokes google.genai client to embed a batch of texts."""
@@ -54,7 +79,7 @@ class GeminiEmbedder:
             client = genai.Client(api_key=key)
             # Remove models/ prefix if required by SDK
             model_name = self.model.replace("models/", "")
-            
+
             contents = [
                 types.Content(role="user", parts=[types.Part(text=text)])
                 for text in texts
@@ -73,7 +98,7 @@ class GeminiEmbedder:
         except Exception as e:
             err_msg = str(e).upper()
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "QUOTA" in err_msg:
-                self.key_manager.mark_cooldown(key, duration=60.0)
+                self.key_manager.mark_cooldown(key, duration=self.cooldown_seconds)
             elif "401" in err_msg or "UNAUTHENTICATED" in err_msg or "INVALID_ARGUMENT" in err_msg:
                 self.key_manager.evict_key(key)
             raise
@@ -86,6 +111,7 @@ class GeminiEmbedder:
     ) -> np.ndarray:
         """
         Embeds a list of texts into normalized float32 vectors.
+        Executes batches concurrently across API keys respecting RPM and TPM quotas.
         Resumes from checkpoint_path if available.
         """
         if len(texts) != len(ids):
@@ -109,7 +135,7 @@ class GeminiEmbedder:
             except Exception as e:
                 logger.warning("Failed to load checkpoint %s, starting fresh: %s", ckpt_file, e)
 
-        output_vectors: List[np.ndarray] = [None] * len(texts)  # type: ignore
+        output_vectors: List[Optional[np.ndarray]] = [None] * len(texts)
         indices_to_compute: List[int] = []
 
         for idx, (rec_id, text) in enumerate(zip(ids, texts)):
@@ -123,33 +149,37 @@ class GeminiEmbedder:
             len(texts), len(resumed_embeddings), len(indices_to_compute)
         )
 
-        # 2. Process in batches
+        if not indices_to_compute:
+            return np.array(output_vectors, dtype=np.float32)
+
+        # 2. Partition into batches
+        batches: List[List[int]] = []
         for start in range(0, len(indices_to_compute), self.batch_size):
-            batch_indices = indices_to_compute[start : start + self.batch_size]
+            batches.append(indices_to_compute[start : start + self.batch_size])
+
+        checkpoint_lock = threading.Lock()
+        completed_batches = 0
+        total_batches = len(batches)
+
+        def process_batch(batch_indices: List[int]) -> None:
+            nonlocal completed_batches
             batch_texts = [texts[i] for i in batch_indices]
-            batch_ids = [ids[i] for i in batch_indices]
+            batch_tokens = sum(estimate_tokens(t) for t in batch_texts)
 
-            batch_vecs: List[np.ndarray] = []
-
-            # If no API keys available or test/offline environment: fallback to deterministic vectors
             if not self.key_manager.api_keys:
-                for t in batch_texts:
-                    batch_vecs.append(_deterministic_mock_vector(t, self.dimension))
+                batch_vecs = [_deterministic_mock_vector(t, self.dimension) for t in batch_texts]
             else:
                 retries = 3
                 success = False
+                batch_vecs = []
+
                 while retries > 0 and not success:
-                    key = self.key_manager.get_key()
+                    key = self.key_manager.acquire_key(estimated_tokens=batch_tokens, timeout=120.0)
                     if not key:
-                        logger.warning("No available API key, waiting 5 seconds...")
-                        time.sleep(5)
-                        key = self.key_manager.get_key()
-                        if not key:
-                            logger.error("All keys exhausted or in cooldown; using offline vector fallback")
-                            for t in batch_texts:
-                                batch_vecs.append(_deterministic_mock_vector(t, self.dimension))
-                            success = True
-                            break
+                        logger.warning("No available API key with quota after timeout; falling back to offline vectors for batch")
+                        batch_vecs = [_deterministic_mock_vector(t, self.dimension) for t in batch_texts]
+                        success = True
+                        break
 
                     try:
                         raw_embeddings = self._embed_batch_remote(batch_texts, key)
@@ -167,20 +197,46 @@ class GeminiEmbedder:
 
                 if not success:
                     logger.error("Batch embedding failed after retries; falling back to offline vectors")
-                    for t in batch_texts:
-                        batch_vecs.append(_deterministic_mock_vector(t, self.dimension))
+                    batch_vecs = [_deterministic_mock_vector(t, self.dimension) for t in batch_texts]
 
-            for idx, vec in zip(batch_indices, batch_vecs):
-                output_vectors[idx] = vec
-                resumed_embeddings[ids[idx]] = vec
+            # Thread-safe update of outputs and checkpoint
+            with checkpoint_lock:
+                for idx, vec in zip(batch_indices, batch_vecs):
+                    output_vectors[idx] = vec
+                    resumed_embeddings[ids[idx]] = vec
+                completed_batches += 1
+                logger.info(
+                    "Embedded batch %d/%d (%.1f%%) - %d items",
+                    completed_batches,
+                    total_batches,
+                    (completed_batches / total_batches) * 100,
+                    len(batch_indices),
+                )
 
-            # Checkpoint save after every batch
-            if ckpt_file:
-                ckpt_ids = list(resumed_embeddings.keys())
-                ckpt_vecs = np.array(list(resumed_embeddings.values()), dtype=np.float32)
-                ckpt_temp = ckpt_file.with_name(f"{ckpt_file.stem}.tmp.{os.getpid()}.npz")
-                np.savez_compressed(ckpt_temp, ids=np.array(ckpt_ids, dtype=object), embeddings=ckpt_vecs)
-                ckpt_temp.replace(ckpt_file)
+                if ckpt_file:
+                    ckpt_ids = list(resumed_embeddings.keys())
+                    ckpt_vecs = np.array(list(resumed_embeddings.values()), dtype=np.float32)
+                    ckpt_temp = ckpt_file.with_name(
+                        f"{ckpt_file.stem}.tmp.{os.getpid()}.{threading.get_ident()}.npz"
+                    )
+                    np.savez_compressed(
+                        ckpt_temp,
+                        ids=np.array(ckpt_ids, dtype=object),
+                        embeddings=ckpt_vecs,
+                    )
+                    ckpt_temp.replace(ckpt_file)
+
+        # 3. Execution strategy: sequential vs concurrent
+        if self.max_workers <= 1 or len(batches) == 1 or not self.key_manager.api_keys:
+            for b in batches:
+                process_batch(b)
+        else:
+            workers = min(self.max_workers, len(batches))
+            logger.info("Executing parallel embedding across %d worker threads", workers)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = [executor.submit(process_batch, b) for b in batches]
+                for f in concurrent.futures.as_completed(futures):
+                    f.result()
 
         final_array = np.array(output_vectors, dtype=np.float32)
         return final_array

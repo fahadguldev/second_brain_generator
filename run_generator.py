@@ -26,6 +26,12 @@ import sys
 import time
 from typing import List, Optional
 
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Ensure second_brain_generator is on sys.path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 if str(SCRIPT_DIR) not in sys.path:
@@ -136,7 +142,17 @@ def step_embed(config: BrainConfig, dry_run: bool = False) -> None:
     if not api_keys:
         logger.warning("No GEMINI_API_KEY found in environment. Using deterministic fallback embeddings for testing/offline mode.")
 
-    embedder = GeminiEmbedder(api_keys=api_keys, batch_size=config.embedding.batch_size if hasattr(config, "embedding") else 25)
+    emb_cfg = getattr(config, "embedding", None)
+    embedder = GeminiEmbedder(
+        api_keys=api_keys,
+        model=getattr(emb_cfg, "model", "models/gemini-embedding-2") if emb_cfg else "models/gemini-embedding-2",
+        batch_size=getattr(emb_cfg, "batch_size", 25) if emb_cfg else 25,
+        dimension=getattr(emb_cfg, "dimension", 3072) if emb_cfg else 3072,
+        rpm_limit=getattr(emb_cfg, "rate_limit_per_min", 60) if emb_cfg else 60,
+        rpd_limit=getattr(emb_cfg, "rate_limit_per_day", 1000) if emb_cfg else 1000,
+        tpm_limit=getattr(emb_cfg, "rate_limit_tpm", 28000) if emb_cfg else 28000,
+        max_workers=getattr(emb_cfg, "max_workers", None) if emb_cfg else None,
+    )
     embeddings = embedder.embed_texts(texts=texts, ids=ids, checkpoint_path=ckpt_path)
     embedder.save_npz(emb_path, ids=ids, embeddings=embeddings, checkpoint_path=ckpt_path)
     print(f"✓ Embedded {len(ids)} items with dimension {embeddings.shape[1]}. Saved to {emb_path.name}.")

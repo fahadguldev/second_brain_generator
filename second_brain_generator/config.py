@@ -90,6 +90,8 @@ class EmbeddingConfig(BaseModel):
     batch_size: int = 25
     rate_limit_per_min: int = 60
     rate_limit_per_day: int = 1000
+    rate_limit_tpm: int = 28000
+    max_workers: int = 4
 
 
 class QdrantConfig(BaseModel):
