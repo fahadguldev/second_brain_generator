@@ -118,6 +118,7 @@ class TestingPipeline:
         # Gather potential directories
         search_dirs = [
             base_dir / "brain_data",
+            base_dir / "brain_generator" / "brain_data",
             base_dir / "second_brain_generator" / "brain_data",
         ]
 
@@ -157,8 +158,10 @@ class TestingPipeline:
 
         candidates = [
             base_dir / "brain_data/rag_records.jsonl",
+            base_dir / "brain_generator/brain_data/rag_records.jsonl",
             base_dir / "second_brain_generator/brain_data/rag_records.jsonl",
             base_dir / "brain_data/records.jsonl",
+            base_dir / "brain_generator/brain_data/records.jsonl",
             base_dir / "second_brain_generator/brain_data/records.jsonl",
         ]
 
