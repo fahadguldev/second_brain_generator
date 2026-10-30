@@ -52,7 +52,7 @@ export type StreamEvent =
   | { type: 'error'; message: string }
 
 export interface VoiceStatus {
-  provider: 'elevenlabs' | 'jsflabs' | string
+  provider: 'elevenlabs' | string
   configured: boolean
   voice_id?: string | null
   model_id?: string | null

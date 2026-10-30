@@ -45,7 +45,7 @@ ganjiswag/
     │   │   ├── rag.py             # Qdrant retrieval, source re-ranking & Roman Urdu prompts
     │   │   ├── llm.py             # Gemini streaming & key rotation client
     │   │   ├── chat_database.py   # SQLAlchemy session, conversations & feedback models
-    │   │   ├── voice_service.py   # Unified voice facade (ElevenLabs & JSF) with disk caching
+    │   │   ├── voice_service.py   # ElevenLabs voice facade with persistent disk caching
     │   │   ├── elevenlabs_service.py # ElevenLabs TTS & ConvAI client with key pool rotation
     │   │   └── config.py          # App settings & environment resolution
     │   ├── requirements.txt       # Backend Python dependencies

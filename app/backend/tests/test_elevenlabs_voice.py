@@ -12,7 +12,7 @@ from src.elevenlabs_service import (
     synthesize_speech_elevenlabs,
     get_convai_signed_url,
 )
-from src.voice_service import synthesize_speech, get_voice_status
+from src.voice_service import synthesize_speech, get_voice_status, is_voice_configured, AUDIO_CACHE_DIR, _compute_cache_key
 
 
 class TestElevenLabsVoiceService(unittest.TestCase):
@@ -91,19 +91,40 @@ class TestElevenLabsVoiceService(unittest.TestCase):
             self.assertEqual(result["agent_id"], "test_agent")
 
     def test_voice_status_endpoint_returns_elevenlabs_info(self):
-        with patch("src.voice_service.get_active_provider", return_value="elevenlabs"), \
-             patch("src.voice_service.is_elevenlabs_configured", return_value=True):
+        with patch("src.voice_service.is_elevenlabs_configured", return_value=True):
             res = self.client.get("/api/voice/status")
             self.assertEqual(res.status_code, 200)
             data = res.json()
             self.assertEqual(data["provider"], "elevenlabs")
             self.assertTrue(data["configured"])
 
+    def test_synthesize_speech_raises_when_unconfigured(self):
+        with patch("src.voice_service.is_voice_configured", return_value=False):
+            with self.assertRaises(ElevenLabsConfigurationError):
+                asyncio.run(synthesize_speech("Hello"))
+
+    def test_synthesize_speech_uses_cache(self):
+        text = "Unit test cached audio response for ElevenLabs"
+        voice = "mock_eleven_voice"
+        speed = 1.0
+        cache_key = _compute_cache_key(text, voice, speed)
+        cache_file = AUDIO_CACHE_DIR / f"{cache_key}.mp3"
+        fake_mp3 = b"\xff\xfb\x90\x00MockCachedMP3Data"
+        cache_file.write_bytes(fake_mp3)
+
+        try:
+            with patch("src.voice_service.is_voice_configured", return_value=True):
+                result = asyncio.run(synthesize_speech(text, voice_id=voice, speed=speed))
+                self.assertEqual(result, fake_mp3)
+        finally:
+            if cache_file.exists():
+                cache_file.unlink()
+
     def test_tts_endpoint_returns_mp3_for_elevenlabs(self):
         mock_audio = b"\xff\xfb\x90\x00MP3AudioChunk"
         with patch("src.routes.synthesize_speech", new_callable=AsyncMock) as mock_synth:
             mock_synth.return_value = mock_audio
-            res = self.client.post("/api/tts", json={"text": "Test ElevenLabs voice", "provider": "elevenlabs"})
+            res = self.client.post("/api/tts", json={"text": "Test ElevenLabs voice"})
             self.assertEqual(res.status_code, 200)
             self.assertEqual(res.headers["content-type"], "audio/mpeg")
             self.assertEqual(res.content, mock_audio)

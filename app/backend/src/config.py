@@ -50,9 +50,6 @@ class Settings:
         if k.startswith("GEMINI_API_KEY") and val.strip()
     ))
 
-    # Voice Provider Selection ("auto" | "elevenlabs" | "jsflabs")
-    VOICE_PROVIDER: str = os.getenv("VOICE_PROVIDER", "auto").strip().lower()
-
     # ElevenLabs Voice API (TTS & Conversational AI)
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
     ELEVENLABS_API_KEYS: list[str] = list(dict.fromkeys(
@@ -66,17 +63,6 @@ class Settings:
     ELEVENLABS_STABILITY: float = float(os.getenv("ELEVENLABS_STABILITY", "0.5"))
     ELEVENLABS_SIMILARITY_BOOST: float = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.75"))
     ELEVENLABS_SPEED: float = float(os.getenv("ELEVENLABS_SPEED", "1.0"))
-
-    # JSF Labs Voice API (TTS)
-    JSF_USER_ID: str = os.getenv("JSF_USER_ID", "")
-    JSF_API_KEY: str = os.getenv("JSF_API_KEY", "")
-    JSF_API_KEYS: list[str] = list(dict.fromkeys(
-        [val.strip() for k, val in os.environ.items() if k.startswith("JSF_API_KEY") and val.strip()] +
-        [k.strip() for k in os.getenv("JSF_API_KEYS", "").split(",") if k.strip()]
-    ))
-    # Default to built-in JSF Labs default voice if not specified
-    JSF_VOICE_ID: str = os.getenv("JSF_VOICE_ID", "jsf_default_male")
-    JSF_TTS_SPEED: float = float(os.getenv("JSF_TTS_SPEED", "1.0"))
 
     # Model names from Google AI Studio
     # - Embedding model: models/gemini-embedding-2 produces 3072-dim vectors (matches knowledge_base)

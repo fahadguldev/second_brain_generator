@@ -15,13 +15,10 @@ from src.config import settings
 from src.database import ensure_collection
 from src.llm import GenerationError
 from src.rag import generate_answer, generate_answer_stream
-from fastapi import File, Form, UploadFile
 from src.voice_service import (
     get_voice_status,
-    get_active_provider,
     synthesize_speech,
     synthesize_speech_stream,
-    clone_voice,
     VoiceConfigurationError,
     VoiceServiceError,
 )
@@ -260,7 +257,6 @@ class TTSRequest(BaseModel):
     voice_id: Optional[str] = Field(default=None, max_length=128)
     speed: Optional[float] = Field(default=None, ge=0.5, le=2.0)
     model_id: Optional[str] = Field(default=None, max_length=128)
-    provider: Optional[str] = Field(default=None, max_length=32)
 
 
 class VoiceStatusResponse(BaseModel):
@@ -271,16 +267,7 @@ class VoiceStatusResponse(BaseModel):
     speed: float = 1.0
     has_convai_agent: bool = False
     convai_agent_id: Optional[str] = None
-    has_user_id: Optional[bool] = None
     key_pool: Dict[str, Any] = Field(default_factory=dict)
-
-
-class VoiceCloneResponse(BaseModel):
-    success: bool
-    voice_id: Optional[str]
-    name: str
-    gender: str
-    language: str
 
 
 class ConvAISignedUrlResponse(BaseModel):
@@ -322,15 +309,12 @@ async def generate_speech(req: TTSRequest):
             voice_id=req.voice_id,
             speed=req.speed,
             model_id=req.model_id,
-            provider=req.provider,
         )
-        media_type = "audio/wav" if audio_bytes.startswith(b"RIFF") else "audio/mpeg"
-        filename = "speech.wav" if media_type == "audio/wav" else "speech.mp3"
         return Response(
             content=audio_bytes,
-            media_type=media_type,
+            media_type="audio/mpeg",
             headers={
-                "Content-Disposition": f'inline; filename="{filename}"',
+                "Content-Disposition": 'inline; filename="speech.mp3"',
                 "Cache-Control": "public, max-age=86400",
             },
         )
@@ -347,17 +331,14 @@ async def generate_speech(req: TTSRequest):
 @router.post("/tts/stream")
 async def stream_speech(req: TTSRequest):
     try:
-        active_p = (req.provider or get_active_provider()).lower()
-        media_type = "audio/mpeg" if active_p == "elevenlabs" else "audio/wav"
         return StreamingResponse(
             synthesize_speech_stream(
                 req.text,
                 voice_id=req.voice_id,
                 speed=req.speed,
                 model_id=req.model_id,
-                provider=req.provider,
             ),
-            media_type=media_type,
+            media_type="audio/mpeg",
             headers={
                 "Cache-Control": "no-cache",
                 "X-Accel-Buffering": "no",
@@ -367,34 +348,3 @@ async def stream_speech(req: TTSRequest):
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"TTS stream failed: {str(exc)}") from exc
-
-
-@router.post("/voice/clone", response_model=VoiceCloneResponse)
-async def clone_voice_endpoint(
-    audio: UploadFile = File(...),
-    name: str = Form(...),
-    gender: str = Form(default="Male"),
-    language: str = Form(default="en"),
-):
-    """
-    Clone a voice from an audio sample via JSF Labs API:
-    POST https://www.jsflabs.io/api/v1/voice-clone
-    """
-    audio_bytes = await audio.read()
-    if not audio_bytes:
-        raise HTTPException(status_code=400, detail="Empty audio file provided.")
-    try:
-        result = await clone_voice(
-            audio_bytes=audio_bytes,
-            name=name,
-            gender=gender,
-            language=language,
-            filename=audio.filename or "sample.wav",
-        )
-        return VoiceCloneResponse(**result)
-    except VoiceConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except VoiceServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Voice cloning failed: {str(exc)}") from exc
