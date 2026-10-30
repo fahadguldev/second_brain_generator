@@ -1,252 +1,171 @@
-# Second Brain Generator (`second_brain_generator`)
+# Ask GanjiSwag — AI Second Brain Monorepo
 
-A modular, standalone Python toolkit that enables anyone to build their own AI Second Brain from scratch using raw media (video, audio), notes (markdown, text), and social comments/QA exports.
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/Frontend-React_18_%2B_Vite-61DAFB?style=flat&logo=react)](https://react.dev/)
+[![Framer Motion](https://img.shields.io/badge/UI-Motion_Primitives-F43F5E?style=flat&logo=framer)](https://motion.dev/)
+[![Qdrant](https://img.shields.io/badge/Vector_DB-Qdrant_(3072--dim)-DC2626?style=flat&logo=qdrant)](https://qdrant.tech/)
+[![Gemini](https://img.shields.io/badge/AI_Engine-Gemini_Embedding_%26_Flash-4285F4?style=flat&logo=google)](https://ai.google.dev/)
 
----
-
-## Features
-
-- **Media Transcription**: Speech-to-text with `faster-whisper`, Voice Activity Detection (VAD) filtering to strip dead air, and incremental skipping to avoid redundant reprocessing.
-- **Multi-Source Knowledge Compilation**: Ingests transcripts (`.txt`), raw text notes (`.txt`), Markdown files (`.md` with YAML frontmatter), and comment exports (`.json`, `.csv`).
-- **Smart Filtering & Classification**: Detects language (English, Hinglish, Hindi, Urdu), tags topic taxonomies, filters out DM deflections (e.g. "check dm"), and generates RFC 4122 deterministic UUIDv5 identifiers.
-- **Gemini Vector Embeddings**: Generates 3072-dimensional vector embeddings with Google Gemini (`models/gemini-embedding-2`), supporting multi-key rotation, sliding-window rate limiting, and batch checkpointing.
-- **Offline Evaluation**: High-performance local NumPy cosine similarity search and benchmark evaluation.
-- **Qdrant Vector Indexing**: Auto-creates collections and batch-upserts points with deterministic UUIDs and rich metadata payloads.
-- **Unified CLI**: Run the entire pipeline at once or execute individual stages step-by-step.
+An end-to-end, production-grade AI Second Brain grounded in hundreds of hours of **Junaid Akram's (GanjiSwag)** podcasts and video episodes. Translates and bridges cross-lingual Hindi/Devanagari transcripts into authentic, long-form **Roman Urdu** mentorship, career guidance, and social commentary.
 
 ---
 
-## Directory Structure
-
-Drop your raw content into the corresponding folders under `data/`:
+## Architecture Overview
 
 ```
-second_brain_generator/
-├── brain_config.yaml         # Persona, tone guidelines, topic taxonomy, paths
-├── run_generator.py          # Unified CLI orchestrator
-├── test_brain.py             # Standalone offline retrieval test tool
-├── uploader.py               # Standalone Qdrant batch uploader
-├── data/                     # Raw input content
-│   ├── vids/                 # .mp4, .mov, .mkv video recordings
-│   ├── audios/               # .mp3, .wav, .m4a audio notes
-│   ├── text/                 # .txt raw notes
-│   ├── md/                   # .md markdown notes
-│   └── comments/             # .json and .csv comment/QA exports
-└── brain_data/               # Generated artifacts
-    ├── text/                 # Whisper transcripts
-    ├── records.jsonl         # Normalized knowledge base records
-    ├── rag_records.jsonl     # Search-ready RAG chunks with metadata
-    └── gemini_embeddings.npz # 3072-dimensional vector embeddings
+ganjiswag/
+├── .venv/                         # Unified Root Python Virtual Environment
+├── README.md                      # Monorepo Guide & Documentation
+├── .gitignore                     # Repository-wide ignore rules
+├── testing.py                     # Root CLI proxy runner for quick pipeline queries
+│
+├── brain_generator/               # THE DATA & EMBEDDING FACTORY
+│   ├── brain_config.yaml          # Creator persona, taxonomy, & pipeline configuration
+│   ├── requirements.txt           # Pipeline dependencies (Whisper, Gemini, Qdrant)
+│   ├── run_generator.py           # Unified runner (Transcribe, Process, Embed, Upload)
+│   ├── testing.py                 # Offline/Online Roman Urdu CLI testing suite
+│   ├── uploader.py                # Standalone batch Qdrant point upserter
+│   ├── purge_mock_vectors.py      # Checkpoint cleaning & verification utility
+│   ├── brain_data/                # Checkpoints (gemini_embeddings_checkpoint.npz, RAG JSONL)
+│   ├── data/                      # Raw inputs (vids, audios, text, md, comments)
+│   ├── second_brain_generator/    # Python engine package:
+│   │   ├── transcriber/           # faster-whisper speech-to-text
+│   │   ├── compiler/              # Chunker, classifier, and RAG builder
+│   │   ├── embedder/              # Gemini 3072-dim multi-key rotating embedder
+│   │   ├── evaluator/             # Offline similarity & benchmark evaluation
+│   │   ├── responder/             # Roman Urdu prompt engine & fallback synthesizer
+│   │   └── uploader/              # Qdrant batch point ingestion
+│   └── tests/                     # Unit and E2E test suites
+│
+└── app/                           # THE PRODUCTION APPLICATION
+    ├── backend/                   # FASTAPI BACKEND SERVER
+    │   ├── src/
+    │   │   ├── main.py            # FastAPI entry point & CORS configuration
+    │   │   ├── routes.py          # REST & SSE streaming endpoints (/api/ask, /api/conversations)
+    │   │   ├── rag.py             # Qdrant retrieval, source re-ranking & Roman Urdu prompts
+    │   │   ├── llm.py             # Gemini streaming & key rotation client
+    │   │   ├── chat_database.py   # SQLAlchemy session, conversations & feedback models
+    │   │   ├── voice_service.py   # JSF Labs Voice API for realistic TTS voice cloning
+    │   │   └── config.py          # App settings & environment resolution
+    │   ├── requirements.txt       # Backend Python dependencies
+    │   └── tests/                 # Backend unit & integration tests
+    │
+    └── frontend/                  # REACT 18 + VITE + MOTION FRONTEND
+        ├── src/
+        │   ├── components/        # UI & Chat components
+        │   │   ├── chat/          # SourceList, VideoRecommendations, MetaRow
+        │   │   ├── ui/            # AudioWaveform, CopyButton, ScrollToBottomButton
+        │   │   ├── voice/         # VoiceCallModal, VoiceVisualizer, VoiceControlsDock
+        │   │   ├── Composer.tsx   # Auto-resizing textarea with keyboard shortcuts
+        │   │   ├── EmptyState.tsx # Framer motion animated ambient aura & topic cards
+        │   │   └── MessageBubble  # Streaming message renderer with copy & TTS audio
+        │   ├── hooks/             # useChat (SSE), useVoiceCall, useVoicePlayer, useTheme
+        │   └── lib/               # Supabase authentication client
+        ├── package.json           # Node dependencies (Motion, Tailwind, Phosphor Icons)
+        └── tailwind.config.js     # Luxury dark-mode design tokens
 ```
 
 ---
 
-## Quickstart
+## Getting Started
 
-### 1. Set Up Virtual Environment & Dependencies
+### 1. Prerequisites
+- **Python 3.10+** (Python 3.13 recommended)
+- **Node.js 18+** and **pnpm** (`pnpm -v`)
+- **uv** (recommended for blazingly fast Python package management)
+- **Qdrant Vector Database** (Local Docker on port `6333` or Qdrant Cloud)
+- **Google Gemini API Key(s)**
 
-Navigate into the `second_brain_generator` directory:
-```bash
-cd second_brain_generator
-```
+---
 
-You can set up and activate your virtual environment using standard **`python` / `venv`** or **`uv`**:
+### 2. Environment Setup
 
-#### Linux / macOS
+#### Unified Python Virtual Environment (Root)
+Create and activate the virtual environment at the repository root:
 
-**Using standard `python3` & `venv`**:
-```bash
-# 1. Create virtual environment
-python3 -m venv .venv
-
-# 2. Activate environment
-source .venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-```
-
-**Using `uv` (Faster alternative)**:
-```bash
-# Create and activate
-uv venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-uv pip install -r requirements.txt
-```
-
-#### Windows
-
-**Using standard `python` & `venv`**:
 ```powershell
-# 1. Create virtual environment
-python -m venv .venv
-
-# 2. Activate environment
-# In PowerShell:
-.\.venv\Scripts\Activate.ps1
-
-# In Command Prompt (cmd.exe):
-.\.venv\Scripts\activate.bat
-
-# In Git Bash:
-source .venv/Scripts/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-```
-
-> **PowerShell ExecutionPolicy Note**: If you encounter an error in PowerShell (*"running scripts is disabled on this system"*), allow script execution for your session before activating:
-> ```powershell
-> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-> .\.venv\Scripts\Activate.ps1
-> ```
-
-**Using `uv` (Faster alternative)**:
-```powershell
+# Using uv (recommended)
 uv venv .venv
-.\.venv\Scripts\Activate.ps1
-uv pip install -r requirements.txt
+.\.venv\Scripts\activate
+
+# Install all backend and pipeline dependencies
+uv pip install -r brain_generator/requirements.txt
+uv pip install -r app/backend/requirements.txt
 ```
 
-#### Run Directly Without Activating
-You can also execute project scripts directly using the virtual environment's Python binary:
-- **Linux / macOS**:
-  ```bash
-  .venv/bin/python run_generator.py --help
-  ```
-- **Windows**:
-  ```powershell
-  .\.venv\Scripts\python.exe run_generator.py --help
-  ```
-
-#### Deactivate
-When you are done working, deactivate the environment from any shell:
-```bash
-deactivate
+#### Frontend Setup
+```powershell
+cd app/frontend
+pnpm install
 ```
 
-### 2. Initialize Directories
-
-Scaffold the input and output directory tree:
-
-```bash
-python run_generator.py --init
-```
-
-### 3. Configure Environment
-
-Create a `.env` file in your project root with your credentials:
-
-```dotenv
-# Gemini API Key(s) - Supports multi-key rotation
+#### Environment Variables
+Create `.env` in `brain_generator/` and `app/backend/`:
+```env
 GEMINI_API_KEY=AIzaSy...
 GEMINI_API_KEY_1=AIzaSy...
-GEMINI_API_KEY_2=AIzaSy...
-
-# Qdrant Vector Database
 QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=
 QDRANT_COLLECTION=second_brain
 ```
 
-### 4. Add Your Content
-
-Drop your media files in `data/vids/` and `data/audios/`, notes in `data/text/` and `data/md/`, and comments in `data/comments/`.
-
 ---
 
-## Pipeline Execution
+### 3. Usage & Execution
 
-### 1. Run Complete Generation Process (Local Only)
+#### A. Roman Urdu CLI Testing Pipeline
+Test your Second Brain immediately from the command line:
 
-To run the complete generation pipeline end-to-end (without pushing vectors to Qdrant):
+```powershell
+# Ask any question directly in Roman Urdu:
+python testing.py "Karachi mein street crime se bachne ke kya tareeqay hain?"
 
-```bash
+# Run interactive conversation loop:
+python testing.py --interactive
+
+# Run automated benchmark suite:
+python testing.py --demo
+
+# Force offline mode (deterministic mock without consuming API quota):
+python testing.py --offline "CS degree zaroori hai ya skills?"
+```
+
+#### B. Running the Data Generator (ETL Factory)
+```powershell
+cd brain_generator
+
+# 1. Transcribe media -> Compile RAG records -> Embed into 3072-dim vectors:
 python run_generator.py
-# or
-python run_generator.py --all
+
+# 2. Batch upload 13,400+ vectors into Qdrant:
+python uploader.py --batch-size 100
 ```
 
-This sequentially executes stages 1 through 5:
-1. Directory scaffolding (`--init`)
-2. Media transcription (`--transcribe`)
-3. Knowledge compilation (`--process`)
-4. Vector embedding generation (`--embed`)
-5. Offline retrieval evaluation (`--test`)
+#### C. Running the Full-Stack Application
 
-> **Note**: This process saves all vectors locally to `brain_data/gemini_embeddings.npz` and **does NOT push vectors to Qdrant**.
+**Start the FastAPI Backend:**
+```powershell
+# From root directory:
+.\.venv\Scripts\uvicorn app.backend.src.main:app --host 0.0.0.0 --port 8000 --reload
+```
+API documentation will be accessible at: `http://localhost:8000/docs`
+
+**Start the React 18 Frontend:**
+```powershell
+cd app/frontend
+pnpm dev
+```
+Interactive Web UI will be live at: `http://localhost:5173`
 
 ---
 
-### 2. Push Vectors to Qdrant (Separate Command)
+## Key Highlights
 
-To upload your generated embeddings to your Qdrant vector database, run the dedicated separate command:
-
-```bash
-python run_generator.py --upload
-# or
-python uploader.py
-```
+- **Cross-Lingual Bridge**: Seamlessly connects user queries in Roman Urdu or English to 13,400+ podcast chunks transcribed in Devanagari Hindi using Gemini's 3072-dimensional vector space.
+- **Maximal Long-Form Roman Urdu Responses**: Structured 5-stage responses covering unfiltered takes, societal analysis, podcast excerpts, actionable advice, and final takeaways.
+- **Motion Primitives & Luxury UI**: Framer motion-powered ambient glow, fluid springs, audio waveforms, and responsive sidebars designed for high-aesthetic AI experiences.
+- **Voice Mode Ready**: Full support for real-time speech-to-speech calls via the JSF Labs Voice API.
 
 ---
 
-### Run Step-by-Step
-
-You can also execute any individual stage on demand:
-
-| Step | Command | Description |
-|---|---|---|
-| **Init** | `python run_generator.py --init` | Scaffolds `data/` and `brain_data/` directories |
-| **Transcribe** | `python run_generator.py --transcribe` | Transcribes audio & video using faster-whisper |
-| **Process** | `python run_generator.py --process` | Compiles notes and comments into JSONL records |
-| **Embed** | `python run_generator.py --embed` | Generates 3072-dim embeddings via Gemini API |
-| **Test** | `python run_generator.py --test` | Evaluates retrieval with cosine similarity |
-| **Upload (Qdrant)** | `python run_generator.py --upload` | Separate command: Batch upserts vectors into Qdrant |
-
----
-
-## CLI Options & Flags
-
-```
---all, --transcribe, --process, --embed, --test, --upload
-```
-
-- `--all`: Execute all pipeline stages in sequence.
-- `--transcribe`: Run speech-to-text transcription only.
-- `--process`: Run compilation and classification stage only.
-- `--embed`: Generate vector embeddings only.
-- `--test`: Run retrieval benchmark tests only.
-- `--upload`: Index and upload points to Qdrant only.
-- `--init`: Initialize directory hierarchy.
-- `--dry-run`: Simulate pipeline actions without modifying files or making network calls.
-- `--force`: Force re-transcription / re-processing of already existing output files.
-- `--config PATH`: Path to custom `brain_config.yaml` (defaults to `brain_config.yaml`).
-- `--data-dir PATH`: Override the root data directory path.
-
----
-
-## Testing Retrieval Offline
-
-You can test queries directly against your local embeddings without starting a backend server:
-
-```bash
-python test_brain.py "How do I get started with cloud computing?"
-python test_brain.py --top-k 10 "Should I prioritize degree or skills?"
-```
-
----
-
-## Running the Test Suite
-
-The package includes a comprehensive 4-tier test suite covering 213 test scenarios:
-
-```bash
-python tests/runner.py
-# Or run a specific tier:
-python tests/runner.py --tier 1
-python tests/runner.py --tier 2
-python tests/runner.py --tier 3
-python tests/runner.py --tier 4
-```
+## License
+MIT
