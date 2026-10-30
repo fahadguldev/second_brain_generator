@@ -50,6 +50,23 @@ class Settings:
         if k.startswith("GEMINI_API_KEY") and val.strip()
     ))
 
+    # Voice Provider Selection ("auto" | "elevenlabs" | "jsflabs")
+    VOICE_PROVIDER: str = os.getenv("VOICE_PROVIDER", "auto").strip().lower()
+
+    # ElevenLabs Voice API (TTS & Conversational AI)
+    ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
+    ELEVENLABS_API_KEYS: list[str] = list(dict.fromkeys(
+        [val.strip() for k, val in os.environ.items() if k.startswith("ELEVENLABS_API_KEY") and val.strip()] +
+        [k.strip() for k in os.getenv("ELEVENLABS_API_KEYS", "").split(",") if k.strip()]
+    ))
+    # Default ElevenLabs voice (e.g. JBFqnCBsd6RMkjVDRZzb (George), or custom cloned voice)
+    ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+    ELEVENLABS_MODEL_ID: str = os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+    ELEVENLABS_CONVAI_AGENT_ID: str = os.getenv("ELEVENLABS_CONVAI_AGENT_ID", "")
+    ELEVENLABS_STABILITY: float = float(os.getenv("ELEVENLABS_STABILITY", "0.5"))
+    ELEVENLABS_SIMILARITY_BOOST: float = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.75"))
+    ELEVENLABS_SPEED: float = float(os.getenv("ELEVENLABS_SPEED", "1.0"))
+
     # JSF Labs Voice API (TTS)
     JSF_USER_ID: str = os.getenv("JSF_USER_ID", "")
     JSF_API_KEY: str = os.getenv("JSF_API_KEY", "")
@@ -97,5 +114,6 @@ class Settings:
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
+
 
 settings = Settings()

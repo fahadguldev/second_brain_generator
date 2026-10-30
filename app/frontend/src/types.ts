@@ -50,3 +50,13 @@ export type StreamEvent =
   | { type: 'delta'; text: string }
   | { type: 'done'; conversation_id: string; user_message_id: string; assistant_message_id: string }
   | { type: 'error'; message: string }
+
+export interface VoiceStatus {
+  provider: 'elevenlabs' | 'jsflabs' | string
+  configured: boolean
+  voice_id?: string | null
+  model_id?: string | null
+  speed?: number
+  has_convai_agent?: boolean
+  convai_agent_id?: string | null
+}

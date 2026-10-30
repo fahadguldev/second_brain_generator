@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { lazy } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import { ConversationProvider } from '@elevenlabs/react'
 import { useChat } from './hooks/useChat'
 import { useTheme } from './hooks/useTheme'
 import { useVoicePlayer } from './hooks/useVoicePlayer'
@@ -214,6 +215,10 @@ function ChatApp() {
         currentTranscript={voiceCall.currentTranscript}
         lastAIResponse={voiceCall.lastAIResponse}
         error={voiceCall.error}
+        provider={voiceCall.provider}
+        hasConvAIAgent={voiceCall.hasConvAIAgent}
+        callMode={voiceCall.callMode}
+        onSwitchMode={voiceCall.setCallMode}
         onEndCall={voiceCall.endCall}
         onToggleMute={voiceCall.toggleMute}
         onInterrupt={voiceCall.interrupt}
@@ -224,7 +229,13 @@ function ChatApp() {
 }
 
 export default function App() {
-  if (!window.location.pathname.startsWith('/admin')) return <ChatApp />
+  if (!window.location.pathname.startsWith('/admin')) {
+    return (
+      <ConversationProvider>
+        <ChatApp />
+      </ConversationProvider>
+    )
+  }
   return (
     <Suspense
       fallback={

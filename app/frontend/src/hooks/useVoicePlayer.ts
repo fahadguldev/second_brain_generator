@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { VoiceStatus } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
-
-interface VoiceStatus {
-  provider?: string
-  configured: boolean
-  voice_id?: string | null
-  tts_model?: string | null
-  asr_model?: string | null
-}
 
 export function useVoicePlayer() {
   const [playingId, setPlayingId] = useState<string | null>(null)
@@ -20,7 +13,7 @@ export function useVoicePlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioCacheRef = useRef<Map<string, string>>(new Map()) // messageId -> objectURL
 
-  // Fetch Fish Audio configuration status from backend on mount
+  // Fetch voice provider and configuration status from backend on mount
   useEffect(() => {
     let cancelled = false
     fetch(`${API_URL}/api/voice/status`)
@@ -132,7 +125,9 @@ export function useVoicePlayer() {
     loadingId,
     errorId,
     errorMessage,
+    voiceStatus,
     isVoiceConfigured: voiceStatus?.configured ?? true,
+    provider: voiceStatus?.provider ?? 'elevenlabs',
     play,
     stop,
   }

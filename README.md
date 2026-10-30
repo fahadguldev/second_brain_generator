@@ -45,7 +45,8 @@ ganjiswag/
     │   │   ├── rag.py             # Qdrant retrieval, source re-ranking & Roman Urdu prompts
     │   │   ├── llm.py             # Gemini streaming & key rotation client
     │   │   ├── chat_database.py   # SQLAlchemy session, conversations & feedback models
-    │   │   ├── voice_service.py   # JSF Labs Voice API for realistic TTS voice cloning
+    │   │   ├── voice_service.py   # Unified voice facade (ElevenLabs & JSF) with disk caching
+    │   │   ├── elevenlabs_service.py # ElevenLabs TTS & ConvAI client with key pool rotation
     │   │   └── config.py          # App settings & environment resolution
     │   ├── requirements.txt       # Backend Python dependencies
     │   └── tests/                 # Backend unit & integration tests
@@ -163,7 +164,7 @@ Interactive Web UI will be live at: `http://localhost:5173`
 - **Cross-Lingual Bridge**: Seamlessly connects user queries in Roman Urdu or English to 13,400+ podcast chunks transcribed in Devanagari Hindi using Gemini's 3072-dimensional vector space.
 - **Maximal Long-Form Roman Urdu Responses**: Structured 5-stage responses covering unfiltered takes, societal analysis, podcast excerpts, actionable advice, and final takeaways.
 - **Motion Primitives & Luxury UI**: Framer motion-powered ambient glow, fluid springs, audio waveforms, and responsive sidebars designed for high-aesthetic AI experiences.
-- **Voice Mode Ready**: Full support for real-time speech-to-speech calls via the JSF Labs Voice API.
+- **ElevenLabs Voice Mode**: Real-time 1-on-1 speech-to-speech calls with natural barge-in and keyboard fallback, plus a one-click **Listen** button on every generated response to hear the creator's voice in authentic Roman Urdu via ElevenLabs Text-to-Speech and optional Conversational AI agent integration.
 
 ---
 
