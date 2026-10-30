@@ -145,8 +145,13 @@ python uploader.py --batch-size 100
 
 **Start the FastAPI Backend:**
 ```powershell
-# From root directory:
-.\.venv\Scripts\uvicorn app.backend.src.main:app --host 0.0.0.0 --port 8000 --reload
+# Option 1: If you are inside the app/backend directory:
+cd app/backend
+uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Option 2: From the project root:
+uvicorn src.main:app --app-dir app/backend --host 0.0.0.0 --port 8000 --reload
+# (or: .\.venv\Scripts\uvicorn app.backend.src.main:app --host 0.0.0.0 --port 8000 --reload)
 ```
 API documentation will be accessible at: `http://localhost:8000/docs`
 

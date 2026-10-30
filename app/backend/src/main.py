@@ -1,3 +1,11 @@
+from pathlib import Path
+import sys
+
+# Ensure backend root is in sys.path regardless of whether invoked from root or app/backend
+_backend_root = Path(__file__).resolve().parent.parent
+if str(_backend_root) not in sys.path:
+    sys.path.insert(0, str(_backend_root))
+
 import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
