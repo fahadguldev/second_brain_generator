@@ -1,0 +1,22 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "qdrant-client",
+    "google-genai",
+    "python-dotenv",
+    "pydantic-settings",
+    "numpy",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.2",
+    "itsdangerous>=2.2",
+    "httpx>=0.28",
+    "python-multipart>=0.0.20",
+    "pyyaml>=6.0",
+]

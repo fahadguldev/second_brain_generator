@@ -1,0 +1,437 @@
+version: '1.0'
+creator:
+  name: Fahad Gul
+  handles:
+  - fahadgul.dev
+  - fahadgul
+  - '@fahadgul'
+  bio: Software Engineer & Cloud Architect
+persona:
+  name: Fahad Gul
+  languages:
+    primary: english
+    secondary:
+    - hinglish
+    - urdu
+  tone: direct, concise, authentic, technical
+  default_domain: professional
+  avoid_words:
+  - bhai
+  - bro
+tone_guidelines:
+- Short and punchy; 1-2 sentences by default
+- English base with natural Romanized Hinglish code-switching
+- Answer directly first, then provide minimal necessary explanation
+- Authentic personal knowledge and opinions over generic AI answers
+- Factual grounding strictly overrides communication style
+- Natural forms of address without forced slang
+- Never invent credentials, personal history, or experiences
+chunk_size: 1500
+chunk_overlap: 200
+personal_topics:
+- family
+- marriage
+- studies
+- future
+- personal
+- life
+topics:
+  python:
+  - python
+  - fastapi
+  - pydantic
+  - pytest
+  - asyncio
+  cloud:
+  - cloud
+  - aws
+  - serverless
+  - ec2
+  - s3
+  - lambda
+  - amazon web
+  - aws iam
+  - rds
+  - cloudfront
+  - route 53
+  - aurora
+  - dynamodb
+  - application load balancer
+  - network load balancer
+  - elastic load balancing
+  - auto scaling group
+  - cloudformation
+  - cloudwatch
+  - serverless architecture
+  - cloud infrastructure
+  - cloud architecture
+  - cloud deployment
+  - cloud networking
+  - compute capacity
+  - connection pooling
+  cybersecurity:
+  - cyber
+  - security
+  - hacking
+  - ethical
+  - infosec
+  ai:
+  - artificial intelligence
+  - machine learning
+  - llm
+  - rag
+  - embeddings
+  - neural
+  - qdrant
+  - gemini
+  - agentic ai
+  - ai agents
+  - generative ai
+  - large language model
+  - llm orchestration
+  - langchain
+  - langgraph
+  - retrieval augmented generation
+  - semantic search
+  - vector database
+  - vector store
+  - reranking
+  - prompt engineering
+  - ai workflow
+  - tool calling
+  - function calling
+  - chunking
+  - text embeddings
+  - transcription
+  - rag pipeline
+  datascience:
+  - data science
+  - datascience
+  - analytics
+  - pandas
+  - numpy
+  webdev:
+  - web dev
+  - webdev
+  - frontend
+  - backend
+  - html
+  - css
+  - react
+  - nextjs
+  - javascript
+  - typescript
+  - full stack development
+  - fullstack
+  - react js
+  - angular
+  - angularjs
+  - next js
+  - node js
+  - nestjs
+  - express js
+  - django
+  - frontend development
+  - backend development
+  - rest api
+  - api integration
+  - responsive design
+  - authentication
+  - authorization
+  - web application
+  - software architecture
+  - state management
+  - server side rendering
+  devops:
+  - devops
+  - docker
+  - kubernetes
+  - ci/cd
+  - container
+  - docker compose
+  - containerization
+  - github actions
+  - continuous integration
+  - continuous deployment
+  - deployment pipeline
+  - ci pipeline
+  - cd pipeline
+  - infrastructure as code
+  - automated deployment
+  - build automation
+  - release management
+  - rollback strategy
+  - application monitoring
+  - logging
+  - container orchestration
+  - production deployment
+  - environment variables
+  - devops automation
+  database:
+  - database
+  - sql
+  - mysql
+  - postgres
+  - postgresql
+  - sqlite
+  - mongodb
+  - redis
+  - supabase
+  - prisma orm
+  - database schema
+  - database indexing
+  - query optimization
+  - database migrations
+  - database scaling
+  - row level security
+  - rls policies
+  - transactions
+  - database replication
+  - database performance
+  - nosql
+  - relational database
+  career:
+  - career
+  - salary
+  - job
+  - jobs
+  - scope
+  - market
+  - hiring
+  - interview
+  - resume
+  - cv
+  - job search
+  - job application
+  - job interview
+  - technical interview
+  - salary negotiation
+  - career roadmap
+  - career transition
+  - remote jobs
+  - freelancing
+  - internship
+  - professional growth
+  - software engineer
+  - technical project manager
+  - career opportunities
+  - job market
+  - portfolio
+  - hiring process
+  - university to career
+  family:
+  - family
+  - parents
+  - father
+  - mother
+  - brother
+  - sister
+  - siblings
+  - home
+  - relatives
+  - bhai
+  - ma
+  - mery
+  - ghar
+  - hamari
+  - shadi
+  - wife
+  marriage:
+  - marriage
+  - wedding
+  - nikkah
+  - relationship
+  - spouse
+  - wife
+  - life partner
+  - settle down
+  studies:
+  - study
+  - studies
+  - exam
+  - exams
+  - course
+  - courses
+  - learning
+  - university
+  - degree
+  - academics
+  - cgpa
+  - gpa
+  - semester
+  - bachelor of computer science
+  - bs cs
+  - masters degree
+  - ms cs
+  - university admission
+  - scholarship application
+  - fully funded scholarship
+  - study abroad
+  - european universities
+  - degree selection
+  - university comparison
+  - academic planning
+  - academic transcript
+  - cgpa improvement
+  - learning roadmap
+  - course selection
+  - student guidance
+  - higher education
+  future:
+  - future
+  - goals
+  - plan
+  - plans
+  - vision
+  - 5-year
+  - ambition
+  - roadmap
+  - target
+  - aspiration
+  projects:
+  - javascript
+  - js
+  - npm
+  - run dev
+  - ci/cd
+  - devops
+  - docker
+  - readme
+  - side project
+  - personal project
+  - software project
+  - project architecture
+  - technical requirements
+  - feature implementation
+  - debugging
+  - code review
+  - software prototype
+  - minimum viable product
+  - mvp
+  - project repository
+  - project documentation
+  - application development
+  - product development
+  - system design
+  - project deployment
+  - project testing
+  personal:
+  - personal life
+  - hobbies
+  - diary
+  - journaling
+  - daily routine
+  - personal reflection
+  - personal preferences
+  - life experiences
+  - self improvement
+  - personal growth
+  - lifestyle
+  - favorite activities
+  - reading habits
+  - time management
+  - productivity habits
+  - personal goals
+  - weekend activities
+  - family time
+  - watching movies
+  books:
+  - book
+  - books
+  - author
+  - book summary
+  - book review
+  - chapter notes
+  - reading notes
+  - book highlights
+  - key takeaways
+  - lessons learned
+  - memorable quotes
+  - book recommendations
+  - reading list
+  - nonfiction
+  - fiction
+  - psychology books
+  - business books
+  - technology books
+  - philosophy
+  - mental models
+  - leadership books
+  - productivity books
+  content_creation:
+  - content creation
+  - content creator
+  - video script
+  - short form video
+  - tiktok content
+  - educational content
+  - content strategy
+  - audience growth
+  - content analytics
+  - video ideas
+  - social media engagement
+  - creator workflow
+  - personal branding
+  - educational videos
+  - student guidance
+  - career guidance
+  - content planning
+  - video production
+  project_management:
+  - project management
+  - delivery management
+  - client operations
+  - client communication
+  - stakeholder management
+  - sprint planning
+  - task assignment
+  - project timeline
+  - deadline management
+  - resource allocation
+  - team coordination
+  - risk management
+  - scope management
+  - agile methodology
+  - scrum
+  - project reporting
+  - client requirements
+  - software delivery
+  - team management
+  automation:
+  - automation
+  - workflow automation
+  - python automation
+  - email automation
+  - web scraping
+  - job scraping
+  - apify
+  - scheduled tasks
+  - repetitive tasks
+  - task automation
+  - browser automation
+  - api integration
+  - automation script
+  - productivity tools
+  - whatsapp bot
+  - automated reminders
+  - process optimization
+  entrepreneurship:
+  - entrepreneurship
+  - startup
+  - saas
+  - software as a service
+  - business idea
+  - product strategy
+  - product market fit
+  - customer acquisition
+  - pricing strategy
+  - business model
+  - branding
+  - marketing strategy
+  - customer discovery
+  - revenue model
+  - product launch
+  - small business
+  - agency operations
+  - crm
+  - business automation
