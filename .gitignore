@@ -1,28 +1,41 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
 # Environments
 .venv/
 env/
 venv/
 ENV/
 
-# Testing & Coverage
+# Node & Frontend
+node_modules/
+dist/
+build/
+.next/
+*.log
+
+# Byte-compiled / Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.swp
+
+# Testing & Cache
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Local pipeline data & generated artifacts
-data/
+# Local pipeline data & large models/vectors
 brain_data/
+data/
 *.npz
 *.checkpoint.npz
+audio_cache/
+second_brain.db
+*.db
 
-# Secrets & Environment variables
+# Secrets & Environment Variables
 .env
 .env.*
+!.env.example
+!**/.env.example
 .env.local
 .env.bak
 
@@ -30,4 +43,4 @@ brain_data/
 .DS_Store
 .idea/
 .vscode/
-*.swp
+Thumbs.db
