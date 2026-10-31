@@ -40,7 +40,7 @@ def main():
     creds = get_qdrant_credentials()
     url = creds.url or getattr(cfg.qdrant, "url", None)
     api_key = creds.api_key or getattr(cfg.qdrant, "api_key", None)
-    coll_name = getattr(cfg.qdrant, "collection_name", "second_brain")
+    coll_name = creds.collection or getattr(cfg.qdrant, "collection_name", "second_brain")
 
     uploader = QdrantUploader(url=url, api_key=api_key, collection_name=coll_name)
     count = uploader.upload_from_disk(emb_p, rag_p, batch_size=args.batch_size)

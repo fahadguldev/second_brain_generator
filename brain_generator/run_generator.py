@@ -193,6 +193,8 @@ def step_upload(config: BrainConfig, dry_run: bool = False) -> None:
         coll_name = config.qdrant.collection_name
 
     creds = get_qdrant_credentials()
+    if creds.collection:
+        coll_name = creds.collection
     url = creds.url or getattr(config.qdrant, "url", None)
     api_key = creds.api_key or getattr(config.qdrant, "api_key", None)
 
