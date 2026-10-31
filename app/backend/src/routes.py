@@ -206,7 +206,11 @@ def ask_question_stream(
 
     stream_response = StreamingResponse(
         events(), media_type="application/x-ndjson",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )
     for k, v in response.headers.items():
         if k.lower() not in ("content-type", "content-length"):

@@ -1,8 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
+  CaretDown,
   CircleNotch,
   Pause,
   SpeakerHigh,
+  VideoCamera,
   WarningCircle,
 } from '@phosphor-icons/react'
 import { motion, useReducedMotion } from 'motion/react'
@@ -27,7 +29,8 @@ export interface MessageBubbleProps {
 function renderNodeWithCitations(
   node: React.ReactNode,
   sources?: SourceItem[],
-  keyPrefix = 'c'
+  keyPrefix = 'c',
+  onCitationClick?: (idx: number) => void
 ): React.ReactNode {
   if (typeof node === 'string') {
     const citationRegex = /\[(\d+(?:\s*,\s*\d+)*)\]/g
@@ -60,13 +63,8 @@ function renderNodeWithCitations(
             href={`#source-ref-${idx}`}
             onClick={(e) => {
               e.preventDefault()
-              const el = document.getElementById(`source-ref-${idx}`)
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                el.classList.add('ring-2', 'ring-blue-400', 'bg-blue-500/10')
-                setTimeout(() => {
-                  el.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-500/10')
-                }, 2000)
+              if (onCitationClick) {
+                onCitationClick(idx)
               }
             }}
             title={tooltip}
@@ -89,7 +87,7 @@ function renderNodeWithCitations(
 
   if (Array.isArray(node)) {
     return node.map((child, i) =>
-      renderNodeWithCitations(child, sources, `${keyPrefix}-${i}`)
+      renderNodeWithCitations(child, sources, `${keyPrefix}-${i}`, onCitationClick)
     )
   }
 
@@ -99,7 +97,8 @@ function renderNodeWithCitations(
       children: renderNodeWithCitations(
         node.props.children,
         sources,
-        `${keyPrefix}-el`
+        `${keyPrefix}-el`,
+        onCitationClick
       ),
     })
   }
@@ -114,10 +113,25 @@ export function MessageBubble({
   isVoiceLoading = false,
   voiceError = null,
 }: MessageBubbleProps) {
+  const [showSources, setShowSources] = useState(false)
   const reduce = useReducedMotion()
   const isUser = msg.role === 'user'
 
-  if (msg.pending) {
+  const handleCitationClick = (idx: number) => {
+    setShowSources(true)
+    setTimeout(() => {
+      const el = document.getElementById(`source-ref-${idx}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('ring-2', 'ring-blue-400', 'bg-blue-500/10')
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-500/10')
+        }, 2000)
+      }
+    }, 120)
+  }
+
+  if (msg.pending && !msg.text) {
     return (
       <motion.div
         initial={reduce ? false : { opacity: 0, y: 8 }}
@@ -176,22 +190,22 @@ export function MessageBubble({
           components={{
             h1: ({ children }) => (
               <h1 className="mt-4 mb-2 text-xl font-bold tracking-tight text-ink sm:text-2xl border-b border-white/8 pb-1">
-                {renderNodeWithCitations(children, sources)}
+                {renderNodeWithCitations(children, sources, 'h1', handleCitationClick)}
               </h1>
             ),
             h2: ({ children }) => (
               <h2 className="mt-3.5 mb-2 text-lg font-bold tracking-tight text-ink sm:text-xl">
-                {renderNodeWithCitations(children, sources)}
+                {renderNodeWithCitations(children, sources, 'h2', handleCitationClick)}
               </h2>
             ),
             h3: ({ children }) => (
               <h3 className="mt-3 mb-1.5 text-[15.5px] font-semibold text-accent sm:text-[16.5px]">
-                {renderNodeWithCitations(children, sources)}
+                {renderNodeWithCitations(children, sources, 'h3', handleCitationClick)}
               </h3>
             ),
             p: ({ children }) => (
               <p className="my-2 leading-relaxed text-ink/90">
-                {renderNodeWithCitations(children, sources)}
+                {renderNodeWithCitations(children, sources, 'p', handleCitationClick)}
               </p>
             ),
             ul: ({ children }) => (
@@ -206,7 +220,7 @@ export function MessageBubble({
             ),
             li: ({ children }) => (
               <li className="leading-relaxed">
-                {renderNodeWithCitations(children, sources)}
+                {renderNodeWithCitations(children, sources, 'li', handleCitationClick)}
               </li>
             ),
             strong: ({ children }) => (
@@ -229,14 +243,62 @@ export function MessageBubble({
         >
           {msg.text}
         </ReactMarkdown>
+
+        {/* Real-time Streaming Pulse Indicator */}
+        {msg.isStreaming && (
+          <span className="inline-flex items-center ml-1 align-baseline">
+            <span className="inline-block h-4 w-1.5 rounded-xs bg-accent animate-pulse" />
+          </span>
+        )}
       </div>
 
-      {/* Embedded Sources & References */}
-      {sources && sources.length > 0 && (
-        <>
-          <VideoRecommendations sources={sources} />
-          <ReferenceSection sources={sources} />
-        </>
+      {/* Embedded Sources & References (Hidden until clicked) */}
+      {!msg.isStreaming && sources && sources.length > 0 && (
+        <div className="mt-4 pt-1">
+          {!showSources ? (
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              type="button"
+              onClick={() => setShowSources(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface/80 hover:bg-raised px-3.5 py-2 text-xs font-medium text-muted hover:text-ink transition-all cursor-pointer group shadow-xs"
+            >
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-500/15 text-blue-400 group-hover:bg-blue-500/25 transition-colors">
+                <VideoCamera size={13} weight="bold" />
+              </div>
+              <span>View {sources.length} {sources.length === 1 ? 'Source & Reference' : 'Sources & References'}</span>
+              <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-blue-400 border border-blue-500/20">
+                [1..{sources.length}]
+              </span>
+              <CaretDown size={13} className="text-muted/60 transition-transform group-hover:translate-y-0.5 group-hover:text-ink" />
+            </motion.button>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-white/8 pb-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-ink">
+                  <VideoCamera size={14} className="text-blue-400" />
+                  <span>Referenced Sources ({sources.length})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSources(false)}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:bg-raised hover:text-ink transition-colors cursor-pointer"
+                >
+                  <CaretDown size={13} className="rotate-180" />
+                  <span>Hide sources</span>
+                </button>
+              </div>
+
+              <VideoRecommendations sources={sources} />
+              <ReferenceSection sources={sources} defaultOpen={true} />
+            </motion.div>
+          )}
+        </div>
       )}
 
       {/* Bottom Action Bar */}

@@ -150,30 +150,42 @@ export function useChat() {
       const handleEvent = (event: StreamEvent) => {
         if (event.type === 'metadata') {
           info = {
-            latency: event.latency, model: event.model,
-            embeddingModel: event.embedding_model, sources: event.sources || [],
+            latency: event.latency,
+            model: event.model,
+            embeddingModel: event.embedding_model,
+            sources: event.sources || [],
           }
           return
         }
         if (event.type === 'error') throw new Error(event.message)
         if (event.type === 'delta') {
           accumulatedAnswer += event.text
+          setMessages(prev => prev.map(message => message.id === assistantId
+            ? { ...message, pending: false, isStreaming: true, text: accumulatedAnswer, info }
+            : message))
+          scrollToBottom()
+          return
         }
         if (event.type === 'done') {
           setMessages(prev => prev.map(message => {
             if (message.id === optimisticId) return { ...message, id: event.user_message_id }
             if (message.id === assistantId) {
-              return { ...message, id: event.assistant_message_id, pending: false, info }
+              return {
+                ...message,
+                id: event.assistant_message_id,
+                pending: false,
+                isStreaming: false,
+                text: accumulatedAnswer,
+                info: info.sources?.length ? info : message.info,
+              }
             }
             return message
           }))
           setActiveConversationId(event.conversation_id)
           void refreshConversations()
+          scrollToBottom()
           return
         }
-        setMessages(prev => prev.map(message => message.id === assistantId
-          ? { ...message, pending: false, text: message.text + event.text, info }
-          : message))
       }
 
       while (true) {

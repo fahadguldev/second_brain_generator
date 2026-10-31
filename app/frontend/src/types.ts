@@ -45,7 +45,8 @@ export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
-  pending?: boolean
+  pending?: boolean
+  isStreaming?: boolean
   error?: boolean
   info?: AssistantInfo
   createdAt?: string

@@ -55,8 +55,14 @@ function normalizeSource(source: SourceItem, fallbackIndex: number): NormalizedC
   }
 }
 
-export function ReferenceSection({ sources }: { sources: SourceItem[] }) {
-  const [isOpen, setIsOpen] = useState(true)
+export function ReferenceSection({
+  sources,
+  defaultOpen = true,
+}: {
+  sources: SourceItem[]
+  defaultOpen?: boolean
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
   const [expandedExcerpts, setExpandedExcerpts] = useState<Record<number, boolean>>({})
 
   if (!sources || sources.length === 0) return null
