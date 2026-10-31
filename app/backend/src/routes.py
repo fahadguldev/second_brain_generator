@@ -97,72 +97,58 @@ def health_check() -> HealthResponse:
 
 
 @router.get("/conversations", response_model=List[ConversationResponse])
-def list_conversations(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.scalars(
-        select(Conversation).where(Conversation.user_id == user.id)
-        .order_by(Conversation.updated_at.desc())
-    ).all()
+def list_conversations():
+    # DB chat history commented out for stateless deployment:
+    # return db.scalars(select(Conversation).where(Conversation.user_id == user.id).order_by(Conversation.updated_at.desc())).all()
+    return []
 
 
 @router.post("/conversations", response_model=ConversationResponse, status_code=201)
-def create_conversation(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    conversation = Conversation(id=str(uuid4()), user_id=user.id)
-    db.add(conversation)
-    db.commit()
-    return conversation
+def create_conversation():
+    # conversation = Conversation(id=str(uuid4()), user_id=user.id)
+    # db.add(conversation)
+    # db.commit()
+    # return conversation
+    now = utcnow()
+    return ConversationResponse(id=str(uuid4()), title="New Chat", created_at=now, updated_at=now)
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
-def conversation_messages(
-    conversation_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
-    conversation = owned_conversation(db, conversation_id, user.id)
-    return [serialize_message(message) for message in conversation.messages]
+def conversation_messages(conversation_id: str):
+    # conversation = owned_conversation(db, conversation_id, user.id)
+    # return [serialize_message(message) for message in conversation.messages]
+    return []
 
 
 @router.post("/ask", response_model=AskResponse)
 def ask_question(
     req: AskRequest,
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ) -> AskResponse:
-    if req.conversation_id:
-        conversation = owned_conversation(db, req.conversation_id, user.id)
-    else:
-        conversation = Conversation(id=str(uuid4()), user_id=user.id)
-        db.add(conversation)
-
-    previous_messages = [
-        {"role": message.role, "content": message.content}
-        for message in conversation.messages[-10:]
-    ]
-    user_message = Message(id=str(uuid4()), conversation=conversation, role="user", content=req.question)
-    db.add(user_message)
-    if not previous_messages:
-        conversation.title = req.question.strip()[:80]
-    conversation.updated_at = utcnow()
-    db.commit()
+    # DB persistence commented out for stateless deployment:
+    # if req.conversation_id:
+    #     conversation = owned_conversation(db, req.conversation_id, user.id)
+    # else:
+    #     conversation = Conversation(id=str(uuid4()), user_id=user.id)
+    #     db.add(conversation)
+    conv_id = req.conversation_id or str(uuid4())
 
     try:
         result = generate_answer(
             question=req.question, top_k=req.top_k, filter_dict=req.filter_dict,
-            conversation_history=previous_messages,
+            conversation_history=[],
         )
     except GenerationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    assistant_message = Message(
-        id=str(uuid4()), conversation_id=conversation.id, role="assistant",
-        content=result["answer"], model=result["model"], embedding_model=result["embedding_model"],
-        latency=result["latency"], sources=result["sources"],
-    )
-    db.add(assistant_message)
-    conversation.updated_at = utcnow()
-    db.commit()
+
+    # assistant_message = Message(id=str(uuid4()), conversation_id=conversation.id, role="assistant", ...)
+    # db.add(assistant_message)
+    # db.commit()
 
     return AskResponse(
         answer=result["answer"], sources=result["sources"], latency=result["latency"],
         top_k=req.top_k, model=result["model"], embedding_model=result["embedding_model"],
-        conversation_id=conversation.id,
-        user_message_id=user_message.id, assistant_message_id=assistant_message.id,
+        conversation_id=conv_id,
+        user_message_id=str(uuid4()), assistant_message_id=str(uuid4()),
     )
 
 
@@ -170,37 +156,24 @@ def ask_question(
 def ask_question_stream(
     req: AskRequest,
     response: Response,
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ) -> StreamingResponse:
-    if req.conversation_id:
-        conversation = owned_conversation(db, req.conversation_id, user.id)
-    else:
-        conversation = Conversation(id=str(uuid4()), user_id=user.id)
-        db.add(conversation)
-
-    previous_messages = [
-        {"role": message.role, "content": message.content}
-        for message in conversation.messages[-10:]
-    ]
-    user_message = Message(
-        id=str(uuid4()), conversation=conversation, role="user", content=req.question,
-    )
-    db.add(user_message)
-    if not previous_messages:
-        conversation.title = req.question.strip()[:80]
-    conversation.updated_at = utcnow()
-    db.commit()
+    # DB persistence commented out for stateless deployment:
+    # if req.conversation_id:
+    #     conversation = owned_conversation(db, req.conversation_id, user.id)
+    # else:
+    #     conversation = Conversation(id=str(uuid4()), user_id=user.id)
+    #     db.add(conversation)
+    conv_id = req.conversation_id or str(uuid4())
+    user_msg_id = str(uuid4())
+    asst_msg_id = str(uuid4())
 
     try:
         result = generate_answer_stream(
             question=req.question, top_k=req.top_k, filter_dict=req.filter_dict,
-            conversation_history=previous_messages,
+            conversation_history=[],
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Could not prepare response") from exc
-
-    conversation_id = conversation.id
-    user_message_id = user_message.id
 
     def events():
         yield json.dumps({
@@ -208,36 +181,28 @@ def ask_question_stream(
             "latency": result["latency"], "model": result["model"],
             "embedding_model": result["embedding_model"],
         }) + "\n"
-        answer_parts: list[str] = []
-        stream_db = SessionLocal()
+
+        # stream_db = SessionLocal()
         try:
             for text in result["stream"]:
-                answer_parts.append(text)
                 yield json.dumps({"type": "delta", "text": text}) + "\n"
 
-            assistant_message = Message(
-                id=str(uuid4()), conversation_id=conversation_id, role="assistant",
-                content="".join(answer_parts), model=result["model"],
-                embedding_model=result["embedding_model"], latency=result["latency"],
-                sources=result["sources"],
-            )
-            stream_conversation = stream_db.get(Conversation, conversation_id)
-            stream_db.add(assistant_message)
-            if stream_conversation:
-                stream_conversation.updated_at = utcnow()
-            stream_db.commit()
+            # DB persistence commented out:
+            # assistant_message = Message(...)
+            # stream_db.add(assistant_message)
+            # stream_db.commit()
+
             yield json.dumps({
-                "type": "done", "conversation_id": conversation_id,
-                "user_message_id": user_message_id,
-                "assistant_message_id": assistant_message.id,
+                "type": "done", "conversation_id": conv_id,
+                "user_message_id": user_msg_id,
+                "assistant_message_id": asst_msg_id,
             }) + "\n"
         except Exception:
-            stream_db.rollback()
             yield json.dumps({
                 "type": "error", "message": "Response generation was interrupted.",
             }) + "\n"
         finally:
-            stream_db.close()
+            pass
 
     stream_response = StreamingResponse(
         events(), media_type="application/x-ndjson",

@@ -57,7 +57,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def initialize_database():
     try:
-        init_chat_database()
+        # init_chat_database()  # Commented out for stateless deployment
+        pass
     except Exception as e:
         print(f"Could not initialize database on startup: {e}")
 
