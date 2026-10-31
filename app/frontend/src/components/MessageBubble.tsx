@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   CircleNotch,
   Pause,
@@ -5,12 +6,14 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 import { motion, useReducedMotion } from 'motion/react'
-import type { ChatMessage } from '../types'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import type { ChatMessage, SourceItem } from '../types'
 import { ThinkingDots } from './ThinkingDots'
 import { AudioWaveform } from './ui/AudioWaveform'
 import { CopyButton } from './ui/CopyButton'
 import { MetaRow } from './chat/MetaRow'
-import { SourceList } from './chat/SourceList'
+import { ReferenceSection } from './chat/ReferenceSection'
 import { VideoRecommendations } from './chat/VideoRecommendations'
 
 export interface MessageBubbleProps {
@@ -19,6 +22,89 @@ export interface MessageBubbleProps {
   isPlayingVoice?: boolean
   isVoiceLoading?: boolean
   voiceError?: string | null
+}
+
+function renderNodeWithCitations(
+  node: React.ReactNode,
+  sources?: SourceItem[],
+  keyPrefix = 'c'
+): React.ReactNode {
+  if (typeof node === 'string') {
+    const citationRegex = /\[(\d+(?:\s*,\s*\d+)*)\]/g
+    const parts: React.ReactNode[] = []
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+
+    while ((match = citationRegex.exec(node)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(node.slice(lastIndex, match.index))
+      }
+
+      const indices = match[1]
+        .split(',')
+        .map(s => parseInt(s.trim(), 10))
+        .filter(n => !isNaN(n))
+
+      indices.forEach((idx, i) => {
+        const matchedSource = sources?.find(
+          s => (s.citation?.index ?? s.id) === idx
+        )
+        const c = matchedSource?.citation
+        const tooltip = c
+          ? `${c.episode ? `${c.episode}: ` : ''}${c.title || ''}${c.timestamp ? ` (${c.timestamp})` : ''}`
+          : `Citation [${idx}]`
+
+        parts.push(
+          <a
+            key={`${keyPrefix}-cite-${match!.index}-${idx}-${i}`}
+            href={`#source-ref-${idx}`}
+            onClick={(e) => {
+              e.preventDefault()
+              const el = document.getElementById(`source-ref-${idx}`)
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                el.classList.add('ring-2', 'ring-blue-400', 'bg-blue-500/10')
+                setTimeout(() => {
+                  el.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-500/10')
+                }, 2000)
+              }
+            }}
+            title={tooltip}
+            className="inline-flex items-center justify-center mx-0.5 px-1.5 py-0.2 rounded text-[11.5px] font-mono font-bold text-blue-400 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 hover:border-blue-400 hover:text-blue-300 transition-all cursor-pointer align-baseline select-none no-underline shadow-xs"
+          >
+            {idx}
+          </a>
+        )
+      })
+
+      lastIndex = match.index + match[0].length
+    }
+
+    if (lastIndex < node.length) {
+      parts.push(node.slice(lastIndex))
+    }
+
+    return parts.length > 0 ? parts : node
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child, i) =>
+      renderNodeWithCitations(child, sources, `${keyPrefix}-${i}`)
+    )
+  }
+
+  if (React.isValidElement(node) && node.props?.children) {
+    return React.cloneElement(node, {
+      ...node.props,
+      children: renderNodeWithCitations(
+        node.props.children,
+        sources,
+        `${keyPrefix}-el`
+      ),
+    })
+  }
+
+  return node
 }
 
 export function MessageBubble({
@@ -65,7 +151,9 @@ export function MessageBubble({
     )
   }
 
-  // Assistant Message (Clean, calm, uncluttered reading canvas)
+  // Assistant Message (Markdown reading canvas with inline blue citations)
+  const sources = msg.info?.sources
+
   return (
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 8 }}
@@ -81,20 +169,77 @@ export function MessageBubble({
         </div>
       )}
 
-      {/* Main Response Typography */}
+      {/* Main Response Typography with Markdown and Inline Citations */}
       <div className="text-[15px] leading-relaxed text-ink/90 sm:text-[15.5px]">
-        <p className="whitespace-pre-wrap">{msg.text}</p>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({ children }) => (
+              <h1 className="mt-4 mb-2 text-xl font-bold tracking-tight text-ink sm:text-2xl border-b border-white/8 pb-1">
+                {renderNodeWithCitations(children, sources)}
+              </h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="mt-3.5 mb-2 text-lg font-bold tracking-tight text-ink sm:text-xl">
+                {renderNodeWithCitations(children, sources)}
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="mt-3 mb-1.5 text-[15.5px] font-semibold text-accent sm:text-[16.5px]">
+                {renderNodeWithCitations(children, sources)}
+              </h3>
+            ),
+            p: ({ children }) => (
+              <p className="my-2 leading-relaxed text-ink/90">
+                {renderNodeWithCitations(children, sources)}
+              </p>
+            ),
+            ul: ({ children }) => (
+              <ul className="my-2 ml-4 list-disc space-y-1 text-ink/90">
+                {children}
+              </ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="my-2 ml-4 list-decimal space-y-1 text-ink/90">
+                {children}
+              </ol>
+            ),
+            li: ({ children }) => (
+              <li className="leading-relaxed">
+                {renderNodeWithCitations(children, sources)}
+              </li>
+            ),
+            strong: ({ children }) => (
+              <strong className="font-semibold text-ink">
+                {children}
+              </strong>
+            ),
+            blockquote: ({ children }) => (
+              <blockquote className="my-2.5 border-l-2 border-accent/40 pl-3 italic text-muted">
+                {children}
+              </blockquote>
+            ),
+            code: ({ children }) => (
+              <code className="rounded bg-raised/80 px-1.5 py-0.5 font-mono text-[13px] text-accent">
+                {children}
+              </code>
+            ),
+            hr: () => <hr className="my-3 border-white/8" />,
+          }}
+        >
+          {msg.text}
+        </ReactMarkdown>
       </div>
 
-      {/* Embedded Sources & Media */}
-      {msg.info?.sources && msg.info.sources.length > 0 && (
+      {/* Embedded Sources & References */}
+      {sources && sources.length > 0 && (
         <>
-          <VideoRecommendations sources={msg.info.sources} />
-          <SourceList sources={msg.info.sources} />
+          <VideoRecommendations sources={sources} />
+          <ReferenceSection sources={sources} />
         </>
       )}
 
-      {/* Quiet Bottom Action Bar */}
+      {/* Bottom Action Bar */}
       <div className="mt-3 flex items-center gap-3 text-muted">
         {onPlayVoice && (
           <button

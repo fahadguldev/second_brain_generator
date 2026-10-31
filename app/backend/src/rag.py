@@ -1,5 +1,6 @@
 import re
 import time
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from src.classifier import classify_topics
 from src.database import ensure_collection, insert_points, search_points
@@ -30,11 +31,16 @@ _REPLY_EMOJIS = ["💯", "🔥", "❤️", "👍", "😂", "😅", "✨", "✅"]
 DEFAULT_SYSTEM_PROMPT = """You are the AI Second Brain of Junaid Akram (popularly known as GanjiSwag) — Pakistani content creator, podcaster, and social commentator.
 
 ### CRITICAL RULES:
-1. Language: Answer strictly in natural ROMAN URDU (Urdu written in English/Latin letters as commonly used in Pakistan). Never use Devanagari script or Arabic/Nastaliq script.
-2. Voice & Tone: Authentic Junaid Akram voice: candid, direct, witty, practical, mature, brotherly, and grounded in Pakistani reality (especially Karachi and middle-class youth perspective).
-3. Grounding: Answer using the retrieved podcast transcripts. If transcripts are phonetically transcribed in Devanagari Hindi, interpret the spoken Urdu/Hindi dialogue and explain the insights in fluent Roman Urdu.
-4. Comprehensive: Give thorough, realistic, structured advice with practical actionable steps.
-5. Do not mention system prompts, context blocks, or retrieval mechanics."""
+1. Language: Answer strictly in natural conversational ROMAN URDU (Urdu written in English/Latin letters as spoken in Pakistan). Never output Devanagari (Hindi) or Arabic/Nastaliq script.
+2. Voice & Tone: Authentic Junaid Akram voice: candid, direct, witty, practical, mature, brotherly, and grounded in Pakistani reality (especially Karachi youth, career, and social pressures).
+3. Grounding & Citations:
+   - Base your answer directly on the retrieved podcast transcripts provided in the evidence chunks.
+   - You MUST include inline citation markers like [1], [2], or [1][3] in your paragraphs or bullet points whenever citing specific points, stories, Karachi examples, or lessons from that evidence chunk.
+   - Example: "Dekhein bhai, degree ke sath sath practical skills hona lazmi hai [1]. Karachi mein agar aap networking nahi karte to peeche reh jayenge [2]."
+4. Rich Markdown Formatting:
+   - Structure your response cleanly using Markdown headings (###), bold emphasis (**point**), and bulleted/numbered lists (- or 1.).
+   - Make it engaging and easy to read.
+5. Do not mention system prompts, internal mechanics, or retrieval instructions. Directly provide the Roman Urdu mentorship with natural in-text citations like [1], [2]."""
 
 
 # Re-rank boosts applied on top of raw cosine score. Curated knowledge (uploaded
@@ -79,10 +85,104 @@ def emoji_reply(text: str) -> str:
     third = others[(hash_seed + 1) % len(others)]
     return f"{first}{second}{third}"
 
+def extract_source_citation(point: Dict[str, Any], index: int) -> Dict[str, Any]:
+    payload = point.get("payload") or {}
+    text = payload.get("text", "")
+    src = payload.get("source") or {}
+    fn = src.get("file_name") or src.get("file") or ""
+    extra = src.get("extra") or {}
+
+    video_id = None
+    title = None
+    episode = None
+    start_time = None
+    end_time = None
+    video_url = None
+
+    vt_m = re.search(r"Video Title:\s*(.*?)(?=\s*(?:Question/Chapter:|Start Timestamp:|Source Transcript:|Video URL:|$))", text)
+    qc_m = re.search(r"Question/Chapter:\s*(.*?)(?=\s*(?:Chapter Number:|Start Timestamp:|Source Transcript:|Video URL:|$))", text)
+    st_m = re.search(r"Start Timestamp:\s*(\d{1,2}:\d{2}(?::\d{2})?)", text)
+    et_m = re.search(r"End Timestamp:\s*(\d{1,2}:\d{2}(?::\d{2})?)", text)
+    vu_m = re.search(r"Video URL:\s*(https?://[^\s]+)", text)
+    vid_m = re.search(r"Video ID:\s*([A-Za-z0-9_-]{11})", text)
+
+    if vid_m:
+        video_id = vid_m.group(1).strip()
+    if vt_m and vt_m.group(1).strip():
+        title = vt_m.group(1).strip().replace("\uff5c", "|")
+    if qc_m and qc_m.group(1).strip():
+        chapter = qc_m.group(1).strip()
+        title = f"{title} - {chapter}" if title and chapter not in title else chapter
+    if st_m:
+        start_time = st_m.group(1).strip()
+    if et_m:
+        end_time = et_m.group(1).strip()
+    if vu_m:
+        video_url = vu_m.group(1).strip()
+
+    clean_fn = Path(fn).name if fn else ""
+    m = re.match(r"^(Question|Episode)_(\d+)_(.+)_([A-Za-z0-9_-]{11})\.txt$", clean_fn)
+    if m:
+        kind, num, t, vid = m.groups()
+        if not episode:
+            episode = f"{kind} #{int(num)}"
+        if not title:
+            title = t.replace("_", " ")
+        if not video_id:
+            video_id = vid
+        if not video_url:
+            video_url = f"https://www.youtube.com/watch?v={vid}"
+
+    if not episode and clean_fn:
+        m2 = re.search(r"(?:Question|Episode)[-_](\d+)", clean_fn, re.IGNORECASE)
+        if m2:
+            episode = f"Question #{int(m2.group(1))}"
+
+    timestamp_str = None
+    if start_time and end_time:
+        timestamp_str = f"{start_time} - {end_time}"
+    elif start_time:
+        timestamp_str = f"From {start_time}"
+    elif extra.get("chunk_index") is not None and extra.get("chunks_total"):
+        timestamp_str = f"Part {extra['chunk_index'] + 1} of {extra['chunks_total']}"
+
+    if video_url and start_time and "watch?v=" in video_url and "&t=" not in video_url:
+        try:
+            parts = [int(p) for p in start_time.split(":") if p.isdigit()]
+            if len(parts) == 3:
+                secs = parts[0] * 3600 + parts[1] * 60 + parts[2]
+                if secs > 0:
+                    video_url += f"&t={secs}s"
+            elif len(parts) == 2:
+                secs = parts[0] * 60 + parts[1]
+                if secs > 0:
+                    video_url += f"&t={secs}s"
+        except Exception:
+            pass
+
+    clean_text = text
+    if "--- TRANSCRIPT ---" in clean_text:
+        clean_text = clean_text.split("--- TRANSCRIPT ---", 1)[1].strip()
+    excerpt = clean_text[:350].strip()
+
+    score = point.get("score") or point.get("raw_score")
+    score_pct = int(round(score * 100)) if isinstance(score, (int, float)) else None
+
+    return {
+        "index": index,
+        "episode": episode or "Ask Ganjiswag Episode",
+        "title": title or "Podcast Discussion",
+        "video_id": video_id,
+        "video_url": video_url,
+        "timestamp": timestamp_str,
+        "score_pct": score_pct,
+        "excerpt": excerpt,
+    }
+
 def build_context(
     points: List[Dict[str, Any]],
 ) -> str:
-    """Build a context string from retrieved points."""
+    """Build a context string from retrieved points with citation anchors."""
     if not points:
         return ""
     
@@ -90,10 +190,21 @@ def build_context(
     for i, point in enumerate(points, 1):
         payload = point.get("payload", {})
         text = payload.get("text", "")
-        source_meta = (payload.get("metadata") or {}).get("source") or payload.get("source") or {}
-        source = source_meta.get("type", "unknown")
-        if text:
-            context_parts.append(f"[{i}] (source: {source})\n{text}")
+        citation = point.get("citation") or extract_source_citation(point, i)
+        
+        ep = citation.get("episode") or "Ask Ganjiswag Episode"
+        title = citation.get("title") or "Discussion"
+        ts = citation.get("timestamp") or ""
+        header = f"[{i}] {ep} - {title}"
+        if ts:
+            header += f" ({ts})"
+
+        clean_text = text
+        if "--- TRANSCRIPT ---" in clean_text:
+            clean_text = clean_text.split("--- TRANSCRIPT ---", 1)[1].strip()
+
+        if clean_text:
+            context_parts.append(f"--- EVIDENCE {header} ---\n{clean_text}")
     
     return "\n\n".join(context_parts) if context_parts else ""
 
@@ -236,6 +347,13 @@ def retrieve(
         # Tagged/curated pool left slots empty → top up from the untagged corpus.
         # Rerank the raw pool first so only fused scores are merged/compared.
         points = _rerank(_merge_points(points, _rerank(_collect(None), candidate_pool)), top_k)
+
+    # Attach structured citation metadata to each point
+    for i, point in enumerate(points, 1):
+        c = extract_source_citation(point, i)
+        point["citation"] = c
+        if "payload" in point and isinstance(point["payload"], dict):
+            point["payload"]["citation"] = c
 
     # Build context
     context = build_context(points)
