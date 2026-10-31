@@ -24,25 +24,35 @@ from src.database import get_client, get_collection_name
 SCROLL_BATCH = 200
 
 
-def _needs_backfill(metadata: Dict[str, Any], force: bool) -> bool:
+def _needs_backfill(payload: Dict[str, Any], force: bool) -> bool:
     if force:
         return True
-    topics = metadata.get("topics")
+    metadata = payload.get("metadata") or {}
+    topics = metadata.get("topics") or (payload.get("classification") or {}).get("topics")
     return not (isinstance(topics, list) and len(topics) > 0)
 
 
 def _build_tags(payload: Dict[str, Any], lexicon_keys: set) -> Tuple[List[str], str]:
     metadata = payload.get("metadata") or {}
     text = payload.get("text") or ""
-    source = metadata.get("source") or {}
+    source = metadata.get("source") or payload.get("source") or {}
     filename = source.get("file_name") or ""
 
     topics = set(classify_topics(text=text, filename=filename))
     # Keep legacy classifier topics that exist in the current lexicon too.
-    legacy = ((metadata.get("classification") or {}).get("topics")) or []
+    legacy = (
+        metadata.get("topics")
+        or (metadata.get("classification") or {}).get("topics")
+        or (payload.get("classification") or {}).get("topics")
+        or []
+    )
     topics.update(t for t in legacy if t in lexicon_keys)
 
-    domain = metadata.get("domain") or (metadata.get("classification") or {}).get("domain")
+    domain = (
+        metadata.get("domain")
+        or (metadata.get("classification") or {}).get("domain")
+        or (payload.get("classification") or {}).get("domain")
+    )
     if not domain:
         domain = determine_domain(sorted(topics))
     return sorted(topics), str(domain)
@@ -79,7 +89,7 @@ def main() -> None:
             scanned += 1
             payload = point.payload or {}
             metadata = payload.get("metadata") or {}
-            if not _needs_backfill(metadata, args.force):
+            if not _needs_backfill(payload, args.force):
                 skipped += 1
                 continue
             topics, domain = _build_tags(payload, lexicon_keys)
