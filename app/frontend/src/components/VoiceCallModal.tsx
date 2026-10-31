@@ -107,7 +107,7 @@ export function VoiceCallModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold tracking-tight">Fahad Gul</h2>
+                <h2 className="text-sm font-bold tracking-tight">Junaid Akram (GanjiSwag)</h2>
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] text-emerald-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   {provider === 'elevenlabs' ? 'ElevenLabs Voice' : 'Voice Mode'}
@@ -193,7 +193,7 @@ export function VoiceCallModal({
                       animate={{ opacity: 1, y: 0 }}
                       className="line-clamp-3 text-sm font-medium leading-relaxed text-white/90"
                     >
-                      <span className="mr-1.5 font-semibold text-emerald-400">Fahad:</span>
+                      <span className="mr-1.5 font-semibold text-emerald-400">GanjiSwag:</span>
                       {lastAIResponse}
                     </motion.p>
                   ) : currentTranscript ? (

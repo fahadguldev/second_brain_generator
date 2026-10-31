@@ -437,8 +437,11 @@ def load_config(
         # Standard search locations
         search_locations = [
             Path("brain_config.yaml"),
+            Path("brain.config.yml"),
             Path.cwd() / "brain_config.yaml",
+            Path.cwd() / "brain.config.yml",
             Path(__file__).resolve().parent.parent / "brain_config.yaml",
+            Path(__file__).resolve().parent.parent / "brain.config.yml",
         ]
         for loc in search_locations:
             if _safe_is_file(loc):

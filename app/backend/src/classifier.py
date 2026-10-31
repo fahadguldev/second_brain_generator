@@ -49,12 +49,18 @@ def _find_config_path() -> Optional[Path]:
     # Current working directory / backend dir
     cwd = Path.cwd()
     candidates.append(cwd / "brain_config.yaml")
+    candidates.append(cwd / "brain.config.yml")
     candidates.append(cwd / "backend" / "brain_config.yaml")
+    candidates.append(cwd / "backend" / "brain.config.yml")
     
     # Directory relative to this file
     this_dir = Path(__file__).resolve().parent.parent  # backend/
     candidates.append(this_dir / "brain_config.yaml")
+    candidates.append(this_dir / "brain.config.yml")
     candidates.append(this_dir.parent / "brain_config.yaml")
+    candidates.append(this_dir.parent / "brain.config.yml")
+    candidates.append(this_dir.parent.parent / "brain_generator" / "brain_config.yaml")
+    candidates.append(this_dir.parent.parent / "brain_generator" / "brain.config.yml")
     candidates.append(this_dir.parent.parent / "second_brain_generator" / "brain_config.yaml")
 
     for p in candidates:

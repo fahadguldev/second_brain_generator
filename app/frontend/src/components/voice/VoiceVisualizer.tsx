@@ -12,13 +12,13 @@ export function VoiceVisualizer({ callState, isMuted }: VoiceVisualizerProps) {
   const getStatusLabel = () => {
     switch (callState) {
       case 'connecting':
-        return 'Connecting to Fahad…'
+        return 'Connecting to GanjiSwag…'
       case 'listening':
         return isMuted ? 'Microphone muted' : 'Listening to you…'
       case 'processing':
-        return 'Fahad is thinking…'
+        return 'GanjiSwag is thinking…'
       case 'speaking':
-        return 'Fahad is speaking…'
+        return 'GanjiSwag is speaking…'
     }
   }
 

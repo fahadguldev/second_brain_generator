@@ -18,7 +18,7 @@ logger = logging.getLogger("second_brain")
 
 app = FastAPI(
     title="Second Brain AI API",
-    description="Fahad's Second Brain - RAG-powered AI assistant with personalized communication style",
+    description="GanjiSwag's Second Brain - RAG-powered AI assistant with personalized Roman Urdu communication style",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",

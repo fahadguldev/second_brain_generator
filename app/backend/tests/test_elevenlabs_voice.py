@@ -64,7 +64,7 @@ class TestElevenLabsVoiceService(unittest.TestCase):
             mock_post.return_value = mock_response
 
             result_bytes, media_type = asyncio.run(
-                synthesize_speech_elevenlabs("Assalam o Alaikum, main Fahad bol raha hoon")
+                synthesize_speech_elevenlabs("Assalam o Alaikum, main GanjiSwag bol raha hoon")
             )
             self.assertEqual(result_bytes, mock_audio)
             self.assertEqual(media_type, "audio/mpeg")

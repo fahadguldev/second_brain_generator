@@ -65,11 +65,11 @@ export function Header({
             onClick={onStartCall}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.96 }}
-            aria-label="Start voice call with Fahad"
+            aria-label="Start voice call with GanjiSwag"
             className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-raised/80 px-3 py-1.5 text-xs font-medium text-ink shadow-xs backdrop-blur-md transition-all hover:border-accent/50 hover:bg-raised"
           >
             <PhoneCall size={13} weight="fill" className="text-accent" />
-            <span>Call Fahad</span>
+            <span>Call GanjiSwag</span>
           </motion.button>
         )}
 

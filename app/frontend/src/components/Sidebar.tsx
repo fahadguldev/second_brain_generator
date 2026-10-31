@@ -152,7 +152,7 @@ export function Sidebar({
       <div className="mt-auto border-t border-line/50 pt-3">
         <div className="flex items-center gap-2 px-1 text-[11px] text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-ok" />
-          <span>Fahad&apos;s Knowledge Base</span>
+          <span>GanjiSwag&apos;s Knowledge Base</span>
           <span className="ml-auto font-mono text-[10px] text-faint">v2</span>
         </div>
       </div>

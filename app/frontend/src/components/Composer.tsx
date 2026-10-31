@@ -71,7 +71,7 @@ export function Composer({ onSend, disabled }: ComposerProps) {
             }}
             rows={1}
             placeholder={
-              isListening ? 'Listening… speak now' : 'Ask Fahad anything…'
+              isListening ? 'Listening… speak now' : 'Ask GanjiSwag anything…'
             }
             aria-label="Ask a question"
             disabled={disabled}

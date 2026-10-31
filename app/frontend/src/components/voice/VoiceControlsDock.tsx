@@ -74,7 +74,7 @@ export function VoiceControlsDock({
         disabled={callState !== 'speaking'}
         whileHover={callState === 'speaking' ? { scale: 1.08 } : undefined}
         whileTap={callState === 'speaking' ? { scale: 0.92 } : undefined}
-        aria-label="Interrupt Fahad"
+        aria-label="Interrupt GanjiSwag"
         title="Interrupt and speak"
         className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 text-white transition-all hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-30"
       >

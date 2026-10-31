@@ -262,7 +262,7 @@ def main() -> None:
 
     start_time = time.time()
     print("\n🧠 SECOND BRAIN GENERATOR")
-    print(f"Creator: {getattr(config, 'creator_name', 'Fahad Gul')} | Config: {config_path.name}")
+    print(f"Creator: {getattr(config, 'creator_name', 'Junaid Akram')} | Config: {config_path.name}")
     if dry_run:
         print("⚡ MODE: DRY-RUN (Simulating execution)")
 
