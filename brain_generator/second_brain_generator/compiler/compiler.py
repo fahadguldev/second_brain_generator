@@ -90,6 +90,28 @@ class KnowledgeCompiler:
                 continue
             seen_keys.add(dedup_key)
 
+            # Extract header metadata if present in transcript note
+            header_meta = {}
+            if "Start Timestamp:" in text or "Video ID:" in text:
+                st_m = re.search(r"Start Timestamp:\s*(\d{1,2}:\d{2}(?::\d{2})?)", text)
+                et_m = re.search(r"End Timestamp:\s*(\d{1,2}:\d{2}(?::\d{2})?)", text)
+                vid_m = re.search(r"Video ID:\s*([A-Za-z0-9_-]{11})", text)
+                vu_m = re.search(r"Video URL:\s*(https?://[^\s]+)", text)
+                qc_m = re.search(r"Question/Chapter:\s*(.*?)(?=\s*(?:Chapter Number:|Start Timestamp:|Source Transcript:|Video URL:|$))", text)
+                vt_m = re.search(r"Video Title:\s*(.*?)(?=\s*(?:Question/Chapter:|Start Timestamp:|Source Transcript:|Video URL:|$))", text)
+                if st_m:
+                    header_meta["start_timestamp"] = st_m.group(1).strip()
+                if et_m:
+                    header_meta["end_timestamp"] = et_m.group(1).strip()
+                if vid_m:
+                    header_meta["video_id"] = vid_m.group(1).strip()
+                if vu_m:
+                    header_meta["video_url"] = vu_m.group(1).strip()
+                if qc_m:
+                    header_meta["chapter"] = qc_m.group(1).strip()
+                if vt_m:
+                    header_meta["video_title"] = vt_m.group(1).strip()
+
             # Chunk the content using brain app's chunking algorithm
             chunks = chunk_text(text, size=self.chunk_size, overlap=self.chunk_overlap)
             if not chunks:
@@ -117,6 +139,7 @@ class KnowledgeCompiler:
                 )
 
                 extra = dict(item.get("extra", {}))
+                extra.update(header_meta)
                 if total_chunks > 1:
                     extra["chunk_index"] = position
                     extra["chunks_total"] = total_chunks

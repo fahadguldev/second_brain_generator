@@ -1,3 +1,5 @@
+import json
+import logging
 import re
 import time
 from pathlib import Path
@@ -7,6 +9,19 @@ from src.database import ensure_collection, insert_points, search_points
 from src.embeddings import embedding_generator
 from src.llm import llm
 from src.config import settings
+
+logger = logging.getLogger(__name__)
+
+# Precomputed question metadata lookup (timestamps, chapters, video urls)
+_METADATA_FILE = Path(__file__).parent / "question_metadata.json"
+QUESTION_METADATA: Dict[str, Dict[str, Any]] = {}
+if _METADATA_FILE.exists():
+    try:
+        with open(_METADATA_FILE, "r", encoding="utf-8") as _f:
+            QUESTION_METADATA = json.load(_f)
+        logger.info("Loaded %d question metadata entries", len(QUESTION_METADATA))
+    except Exception as _e:
+        logger.warning("Failed to load question_metadata.json: %s", _e)
 
 # Unicode ranges covering common emoji blocks (symbols, pictographs, flags)
 _EMOJI_RE = re.compile(
@@ -121,6 +136,32 @@ def extract_source_citation(point: Dict[str, Any], index: int) -> Dict[str, Any]
         video_url = vu_m.group(1).strip()
 
     clean_fn = Path(fn).name if fn else ""
+
+    # Check precomputed question metadata mapping if timestamps or metadata are missing
+    if clean_fn and clean_fn in QUESTION_METADATA:
+        meta = QUESTION_METADATA[clean_fn]
+        if not start_time and meta.get("start"):
+            start_time = meta["start"]
+        if not end_time and meta.get("end"):
+            end_time = meta["end"]
+        if not video_id and meta.get("video_id"):
+            video_id = meta["video_id"]
+        if not video_url and meta.get("video_url"):
+            video_url = meta["video_url"]
+        meta_chapter = meta.get("chapter")
+        meta_title = meta.get("title")
+        if meta_chapter and (not title or title == "Podcast Discussion"):
+            title = f"{meta_title} - {meta_chapter}" if meta_title else meta_chapter
+
+    if not start_time and extra.get("start_timestamp"):
+        start_time = extra["start_timestamp"]
+    if not end_time and extra.get("end_timestamp"):
+        end_time = extra["end_timestamp"]
+    if not video_id and extra.get("video_id"):
+        video_id = extra["video_id"]
+    if not video_url and extra.get("video_url"):
+        video_url = extra["video_url"]
+
     m = re.match(r"^(Question|Episode)_(\d+)_(.+)_([A-Za-z0-9_-]{11})\.txt$", clean_fn)
     if m:
         kind, num, t, vid = m.groups()
@@ -140,9 +181,15 @@ def extract_source_citation(point: Dict[str, Any], index: int) -> Dict[str, Any]
 
     timestamp_str = None
     if start_time and end_time:
-        timestamp_str = f"{start_time} - {end_time}"
+        if extra.get("chunk_index") is not None and extra.get("chunks_total", 0) > 1:
+            timestamp_str = f"{start_time} - {end_time} (Part {extra['chunk_index'] + 1} of {extra['chunks_total']})"
+        else:
+            timestamp_str = f"{start_time} - {end_time}"
     elif start_time:
-        timestamp_str = f"From {start_time}"
+        if extra.get("chunk_index") is not None and extra.get("chunks_total", 0) > 1:
+            timestamp_str = f"From {start_time} (Part {extra['chunk_index'] + 1} of {extra['chunks_total']})"
+        else:
+            timestamp_str = f"From {start_time}"
     elif extra.get("chunk_index") is not None and extra.get("chunks_total"):
         timestamp_str = f"Part {extra['chunk_index'] + 1} of {extra['chunks_total']}"
 
@@ -151,12 +198,29 @@ def extract_source_citation(point: Dict[str, Any], index: int) -> Dict[str, Any]
             parts = [int(p) for p in start_time.split(":") if p.isdigit()]
             if len(parts) == 3:
                 secs = parts[0] * 3600 + parts[1] * 60 + parts[2]
-                if secs > 0:
-                    video_url += f"&t={secs}s"
             elif len(parts) == 2:
                 secs = parts[0] * 60 + parts[1]
-                if secs > 0:
-                    video_url += f"&t={secs}s"
+            else:
+                secs = 0
+
+            # If chunk is part of a longer question, calculate the proportional timestamp offset
+            chunk_idx = extra.get("chunk_index")
+            chunks_tot = extra.get("chunks_total")
+            if chunk_idx is not None and chunks_tot and chunks_tot > 1 and end_time:
+                end_parts = [int(p) for p in end_time.split(":") if p.isdigit()]
+                if len(end_parts) == 3:
+                    end_secs = end_parts[0] * 3600 + end_parts[1] * 60 + end_parts[2]
+                elif len(end_parts) == 2:
+                    end_secs = end_parts[0] * 60 + end_parts[1]
+                else:
+                    end_secs = secs
+
+                if end_secs > secs + 60 and chunk_idx > 0:
+                    offset_secs = int(secs + (end_secs - secs) * (chunk_idx / chunks_tot))
+                    secs = max(secs, offset_secs - 15)  # 15s pre-roll for context
+
+            if secs > 0:
+                video_url += f"&t={secs}s"
         except Exception:
             pass
 
