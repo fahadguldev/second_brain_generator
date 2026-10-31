@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { VoiceStatus } from '../types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+import { API_URL } from '../lib/api'
 
 export function useVoicePlayer() {
   const [playingId, setPlayingId] = useState<string | null>(null)

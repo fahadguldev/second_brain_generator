@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AssistantInfo, ChatMessage, Conversation, StreamEvent } from '../types'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+import { API_URL } from '../lib/api'
 const VISITOR_KEY = 'second_brain_visitor_id'
 
 function getStoredVisitorId(): string | null {
