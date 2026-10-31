@@ -19,11 +19,16 @@
       "dest": "app/backend/api/index.py"
     },
     {
-      "handle": "filesystem"
+      "src": "/assets/(.*)",
+      "dest": "app/frontend/assets/$1"
+    },
+    {
+      "src": "/((?!api/).*\\.(?:js|css|ico|svg|png|jpg|jpeg|webp|woff|woff2|json|txt))$",
+      "dest": "app/frontend/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "app/frontend/index.html"
     }
   ]
 }
